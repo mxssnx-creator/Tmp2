@@ -26,13 +26,20 @@ export async function GET() {
     await initRedis()
     const client = getRedisClient()
     
+    // Ensure default connections exist before fetching stats
     const allConnections = await getAllConnections()
+    if (allConnections.length === 0) {
+      console.log("[v0] [SystemStats] No connections, triggering seed...")
+      const { ensureDefaultExchangesExist } = await import("@/lib/default-exchanges-seeder")
+      await ensureDefaultExchangesExist()
+    }
     
-    console.log(`[v0] [SystemStats] Analyzing ${allConnections.length} total connections`)
+    const connections = await getAllConnections()
+    console.log(`[v0] [SystemStats] Analyzing ${connections.length} total connections`)
     
     // BASE CONNECTIONS = All base exchange connections (predefined or user-created)
     // that are marked as enabled (is_enabled=1) in Settings
-    const baseConnections = allConnections.filter((c: any) => {
+    const baseConnections = connections.filter((c: any) => {
       return isBaseExchange(c)
     })
     

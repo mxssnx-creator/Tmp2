@@ -36,6 +36,8 @@ export function ExchangeSelectorTop() {
         const response = await fetch("/api/settings/connections")
         if (response.ok) {
           const data = await response.json()
+          console.log("[ExchangeSelectorTop] API Response:", data.count, "connections")
+          
           const allConnections: Connection[] = (data.connections || []).map((c: any) => ({
             id: c.id,
             name: c.name || c.exchange,
@@ -45,8 +47,11 @@ export function ExchangeSelectorTop() {
             isActiveInserted: c.is_active_inserted === "1" || c.is_active_inserted === true,
           }))
           
+          console.log("[ExchangeSelectorTop] All with is_active_inserted:", 
+            allConnections.map(c => ({ id: c.id, isActiveInserted: c.isActiveInserted })))
+          
           const mainConnections = allConnections.filter(c => c.isActiveInserted)
-          console.log("[ExchangeSelectorTop] Total:", allConnections.length, "Main:", mainConnections.length)
+          console.log("[ExchangeSelectorTop] Main connections:", mainConnections.length)
           setConnections(mainConnections)
         }
       } catch (error) {

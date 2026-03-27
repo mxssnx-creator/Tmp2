@@ -2,7 +2,7 @@
 
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { GlobalExchangeSelector } from "@/components/global-exchange-selector"
+import { ExchangeSelectorTop } from "@/components/exchange-selector-top"
 
 interface PageHeaderProps {
   title?: string
@@ -13,23 +13,31 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, children, showExchangeSelector = true }: PageHeaderProps) {
   return (
-    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="flex h-16 items-center gap-4 px-4">
-        <SidebarTrigger className="h-8 w-8" />
-        <Separator orientation="vertical" className="h-8" />
-        {title && (
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold">{title}</h1>
-            {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
-            )}
+    <div className="space-y-0">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="flex h-16 items-center gap-4 px-4">
+          <SidebarTrigger className="h-8 w-8" />
+          <Separator orientation="vertical" className="h-8" />
+          {title && (
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold">{title}</h1>
+              {description && (
+                <p className="text-sm text-muted-foreground">{description}</p>
+              )}
+            </div>
+          )}
+          <div className="flex items-center gap-4">
+            {children && <div className="flex items-center gap-2">{children}</div>}
           </div>
-        )}
-        <div className="flex items-center gap-4">
-          {showExchangeSelector && <GlobalExchangeSelector />}
-          {children && <div className="flex items-center gap-2">{children}</div>}
         </div>
       </div>
+      {showExchangeSelector && (
+        <div className="border-b px-4 py-2 flex justify-end">
+          <div className="w-[200px]">
+            <ExchangeSelectorTop />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

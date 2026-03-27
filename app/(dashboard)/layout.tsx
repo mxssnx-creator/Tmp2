@@ -8,7 +8,6 @@ import { ConnectionStateProvider } from "@/lib/connection-state"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "sonner"
-import { ExchangeSelectorTop } from "@/components/exchange-selector-top"
 
 export default function DashboardLayout({
   children,
@@ -22,11 +21,8 @@ export default function DashboardLayout({
           <SidebarProvider>
             <div className="flex h-screen overflow-hidden bg-background">
               <AppSidebar />
-              <main className="flex-1 overflow-auto flex flex-col">
-                <ExchangeSelectorTop />
-                <div className="flex-1 overflow-auto">
-                  {children}
-                </div>
+              <main className="flex-1 overflow-auto">
+                {children}
               </main>
             </div>
             <Toaster />

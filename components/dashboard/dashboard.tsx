@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RefreshCw, Activity, Pause, Square, AlertCircle } from "lucide-react"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { ExchangeSelectorTop } from "@/components/exchange-selector-top"
 import { toast } from "sonner"
 import type { ExchangeConnection } from "@/lib/types"
 
@@ -248,16 +248,18 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <SidebarTrigger className="border bg-background" />
           <div>
             <h1 className="text-3xl font-bold mb-1">CTS v3.2 Dashboard</h1>
             <p className="text-muted-foreground text-sm">Monitor and control your Main Connections (Active Connections)</p>
           </div>
         </div>
-        <Button onClick={loadExchangeConnectionsActive} size="sm" variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExchangeSelectorTop />
+          <Button onClick={loadExchangeConnectionsActive} size="sm" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Global Coordinator Status - Shows at top of page */}

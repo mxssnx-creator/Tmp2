@@ -85,9 +85,6 @@ export function ExchangeSelectorTop() {
                     <div className="flex items-center gap-2">
                       <Zap className="h-3 w-3 text-yellow-500" />
                       <span>{conn.name}</span>
-                      <Badge className="ml-2 bg-amber-500/20 text-amber-600 border border-amber-500/30 text-xs px-1.5 py-0 h-4">
-                        STANDARD
-                      </Badge>
                     </div>
                   </SelectItem>
                 ))

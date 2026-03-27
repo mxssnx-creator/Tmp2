@@ -30,15 +30,13 @@ export async function GET(request: NextRequest) {
     
     let connections = await getAllConnections()
 
-    // Auto-initialize ONLY user-created connections (not predefined templates)
-    // Predefined connections are informational only and should NOT be stored in Redis
+    // If no connections exist, seed default base connections
     if (connections.length === 0) {
-      console.log("[v0] [API] No connections found in Redis, using file-based predefined templates as information only")
-      console.log("[v0] [API] User must create actual connections from templates - none auto-initialized")
-      
-      // DO NOT auto-create predefined connections
-      // They remain as file-based templates only
-      // The initializeDefaultUserConnections() in redis-db.ts handles creating 4 user-created connections
+      console.log("[v0] [API] No connections found - triggering seed...")
+      const { ensureDefaultExchangesExist } = await import("@/lib/default-exchanges-seeder")
+      await ensureDefaultExchangesExist()
+      connections = await getAllConnections()
+      console.log("[v0] [API] Seeded connections, now have:", connections.length)
     }
 
     if (exchange) {

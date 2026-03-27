@@ -69,15 +69,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Guard: enabling dashboard processing must not implicitly insert into Main panel.
     // Users must explicitly add connection to Main first (add-to-active flow).
+    // Auto-add to Main panel if enabling but not yet added
     if (hasDashboardEnabled && isDashboardEnabled && !hasActiveInserted && !state.main_assigned) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Connection is not assigned to Main Connections",
-          details: "Add the connection to Main Connections first, then enable processing.",
-        },
-        { status: 400 },
-      )
+      console.log(`[v0] [Toggle] Auto-adding connection to Main Connections before enabling...`)
+      // Auto-add to Main panel first
+      const addedConnection = buildMainConnectionEnableUpdate(connection)
+      await updateConnection(resolvedId, addedConnection)
+      console.log(`[v0] [Toggle] Auto-added ${connection.name} to Main Connections`)
+      // Update local state to reflect the change
+      state.main_assigned = true
     }
     
     // Check if state actually changes

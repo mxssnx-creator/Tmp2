@@ -17,10 +17,18 @@ interface Connection {
   lastUsed?: string
 }
 
+const STANDARD_OPTION = {
+  id: "standard",
+  name: "Standard",
+  exchange: "Mock",
+  isReal: false,
+  status: "connected" as const,
+}
+
 export function ConnectionSettingsHeader() {
   const { selectedConnectionId, setSelectedConnectionId } = useExchange()
   const [connections, setConnections] = useState<Connection[]>([])
-  const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null)
+  const [selectedConnection, setSelectedConnection] = useState<Connection | null>(STANDARD_OPTION)
 
   useEffect(() => {
     const loadConnections = async () => {
@@ -48,33 +56,20 @@ export function ConnectionSettingsHeader() {
   }, [])
 
   useEffect(() => {
-    const current = connections.find((c) => c.id === selectedConnectionId) || (connections.length > 0 ? connections[0] : null)
-    setSelectedConnection(current)
+    if (selectedConnectionId === "standard" || !selectedConnectionId) {
+      setSelectedConnection(STANDARD_OPTION)
+    } else {
+      const current = connections.find((c) => c.id === selectedConnectionId)
+      if (current) setSelectedConnection(current)
+    }
   }, [selectedConnectionId, connections])
 
   const handleConnectionChange = (id: string) => {
     setSelectedConnectionId(id)
   }
 
-  if (!selectedConnection && connections.length === 0) {
-    return (
-      <div className="space-y-3 mb-6">
-        <Card className="border-border bg-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Zap className="h-4 w-4 text-yellow-500" />
-              Active Connection
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">No connections available. Add a connection in Settings to get started.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (!selectedConnection) return null
+  const displayValue = selectedConnectionId || "standard"
+  const allOptions = [STANDARD_OPTION, ...connections]
 
   return (
     <div className="space-y-3 mb-6">
@@ -89,38 +84,40 @@ export function ConnectionSettingsHeader() {
           <div className="flex items-center justify-between p-3 rounded bg-muted border border-border">
             <div className="flex items-center gap-3">
               <div className="flex flex-col gap-1">
-                <div className="font-semibold text-sm text-foreground">{selectedConnection.name}</div>
+                <div className="font-semibold text-sm text-foreground">{selectedConnection?.name}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Badge className="bg-amber-500/20 text-amber-600 border border-amber-500/30 text-xs px-1.5 py-0 h-4">
-                    STANDARD
-                  </Badge>
-                  <span>{selectedConnection.exchange}</span>
+                  {selectedConnection?.isReal ? (
+                    <span>{selectedConnection.exchange}</span>
+                  ) : (
+                    <span>Mock data for testing</span>
+                  )}
                 </div>
               </div>
             </div>
             <Badge
               className={`${
-                selectedConnection.status === "connected"
+                selectedConnection?.status === "connected"
                   ? "bg-green-500/20 text-green-600 border-green-500/30"
                   : "bg-red-500/20 text-red-600 border-red-500/30"
               } border text-xs px-2 py-1`}
             >
-              {selectedConnection.status === "connected" ? "✓ Connected" : "✗ Disconnected"}
+              {selectedConnection?.status === "connected" ? "✓ Active" : "✗ Inactive"}
             </Badge>
           </div>
 
           <div className="space-y-2">
             <label className="text-xs font-semibold text-muted-foreground">Switch Connection:</label>
-            <Select value={selectedConnectionId || (connections.length > 0 ? connections[0].id : "")} onValueChange={handleConnectionChange}>
+            <Select value={displayValue} onValueChange={handleConnectionChange}>
               <SelectTrigger className="h-9 text-xs border-input bg-background">
                 <SelectValue placeholder="Select connection" />
               </SelectTrigger>
               <SelectContent>
-                {connections.map((conn) => (
+                {allOptions.map((conn) => (
                   <SelectItem key={conn.id} value={conn.id} className="text-xs">
                     <div className="flex items-center gap-2">
                       <Zap className="h-3 w-3 text-yellow-500" />
                       <span>{conn.name}</span>
+                      {!conn.isReal && <span className="text-muted-foreground text-xs">(Mock)</span>}
                     </div>
                   </SelectItem>
                 ))}
@@ -133,7 +130,7 @@ export function ConnectionSettingsHeader() {
             <span>Each connection has its own isolated settings. Changes here only affect the selected connection.</span>
           </div>
 
-          {selectedConnection.createdAt && (
+          {selectedConnection?.isReal && selectedConnection.createdAt && (
             <div className="text-xs text-muted-foreground flex items-center gap-2 pt-2 border-t border-border">
               <span>Created: {new Date(selectedConnection.createdAt).toLocaleDateString()}</span>
             </div>

@@ -16,8 +16,16 @@ interface Connection {
   status: "connected" | "disconnected" | "error"
 }
 
+const STANDARD_OPTION = {
+  id: "standard",
+  name: "Standard",
+  exchange: "Mock",
+  isReal: false,
+  status: "connected" as const,
+}
+
 export function ExchangeSelectorTop() {
-  const { selectedExchange, selectedConnectionId, setSelectedConnectionId, activeConnections } = useExchange()
+  const { selectedConnectionId, setSelectedConnectionId, activeConnections } = useExchange()
   const [connections, setConnections] = useState<Connection[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
@@ -27,13 +35,15 @@ export function ExchangeSelectorTop() {
         const response = await fetch("/api/settings/connections")
         if (response.ok) {
           const data = await response.json()
-          const realConnections: Connection[] = (data.connections || []).map((c: any) => ({
-            id: c.id,
-            name: c.name || c.exchange,
-            exchange: c.exchange,
-            isReal: true,
-            status: c.is_enabled ? "connected" : "disconnected",
-          }))
+          const realConnections: Connection[] = (data.connections || [])
+            .filter((c: any) => c.is_active_inserted === "1" || c.is_active_inserted === true)
+            .map((c: any) => ({
+              id: c.id,
+              name: c.name || c.exchange,
+              exchange: c.exchange,
+              isReal: true,
+              status: c.is_enabled ? "connected" : "disconnected",
+            }))
           setConnections(realConnections)
         }
       } catch (error) {
@@ -44,14 +54,14 @@ export function ExchangeSelectorTop() {
     loadConnections()
   }, [])
 
-  const currentConnection = connections.find((c) => c.id === selectedConnectionId) || connections[0]
+  const currentConnection = connections.find((c) => c.id === selectedConnectionId) || STANDARD_OPTION
 
   const handleSelectConnection = (id: string) => {
     setSelectedConnectionId(id)
     setIsOpen(false)
   }
 
-  const defaultValue = selectedConnectionId || (connections.length > 0 ? connections[0].id : "standard")
+  const defaultValue = selectedConnectionId || "standard"
 
   return (
     <div className="sticky top-0 z-50 bg-background/95 border-b border-border backdrop-blur">
@@ -69,41 +79,46 @@ export function ExchangeSelectorTop() {
               <div className="flex items-center gap-2 w-full">
                 <Zap className="h-3 w-3 text-yellow-500 flex-shrink-0" />
                 <SelectValue placeholder="Select connection" />
-                {currentConnection?.status === "connected" && (
+                {currentConnection.isReal && currentConnection.status === "connected" && (
                   <Check className="h-3 w-3 text-green-500 ml-auto flex-shrink-0" />
                 )}
               </div>
             </SelectTrigger>
             <SelectContent className="min-w-[200px]">
-              {connections.length === 0 ? (
-                <SelectItem value="standard" disabled>
-                  <span className="text-muted-foreground">No connections available</span>
+              <SelectItem value="standard" className="cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-3 w-3 text-yellow-500" />
+                  <span>Standard</span>
+                </div>
+              </SelectItem>
+              {connections.map((conn) => (
+                <SelectItem key={conn.id} value={conn.id} className="cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-3 w-3 text-yellow-500" />
+                    <span>{conn.name}</span>
+                  </div>
                 </SelectItem>
-              ) : (
-                connections.map((conn) => (
-                  <SelectItem key={conn.id} value={conn.id} className="cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-3 w-3 text-yellow-500" />
-                      <span>{conn.name}</span>
-                    </div>
-                  </SelectItem>
-                ))
-              )}
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex items-center gap-2 min-w-0">
           <div className="hidden sm:flex items-center gap-2 text-xs">
-            {currentConnection?.status === "connected" && (
+            {currentConnection.isReal && currentConnection.status === "connected" ? (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                 <div className="h-2 w-2 rounded-full bg-green-500"></div>
                 <span className="text-green-600">Active</span>
               </div>
+            ) : (
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-muted border border-border">
+                <div className="h-2 w-2 rounded-full bg-muted-foreground"></div>
+                <span className="text-muted-foreground">Mock Data</span>
+              </div>
             )}
           </div>
 
-          {currentConnection?.exchange && (
+          {currentConnection.isReal && currentConnection.exchange && (
             <Badge className="bg-blue-500/20 text-blue-600 border border-blue-500/30 text-xs px-1.5 py-0 h-5">
               {currentConnection.exchange}
             </Badge>
@@ -112,12 +127,14 @@ export function ExchangeSelectorTop() {
       </div>
 
       <div className="px-4 py-1 text-xs text-muted-foreground border-t border-border">
-        {currentConnection ? (
+        {currentConnection.isReal ? (
           <span>
             Connected to <span className="font-semibold text-foreground">{currentConnection.name}</span>
           </span>
         ) : (
-          <span>Add a connection in Settings to get started</span>
+          <span>
+            Standard mode - displaying mock data for testing
+          </span>
         )}
       </div>
     </div>

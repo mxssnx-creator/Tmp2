@@ -80,7 +80,7 @@ export function OverallTab({
             </CardHeader>
             <CardContent className="space-y-8 p-6">
               <div className="settings-section">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Data & Timeframe Configuration</h3>
+                <h3 className="text-xl font-bold text-foreground">Data & Timeframe Configuration</h3>
                 <p className="settings-description mt-2">
                   Configure historical data retrieval and market timeframes
                 </p>
@@ -129,7 +129,7 @@ export function OverallTab({
               <Separator className="settings-divider my-8" />
 
               <div className="settings-section">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Volume Configuration</h3>
+                <h3 className="text-xl font-bold text-foreground">Volume Configuration</h3>
                 <p className="settings-description mt-2">
                   Configure volume factors and position calculation settings
                 </p>
@@ -500,8 +500,8 @@ export function OverallTab({
               <CardDescription>Configure request delays to respect exchange rate limits</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded p-3 text-sm">
-                <p className="text-blue-900 dark:text-blue-200">
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+                <p className="text-blue-900">
                   Rate limiting ensures all API requests to exchanges comply with their rate limits. Set minimum delays between requests to avoid getting blocked.
                 </p>
               </div>
@@ -599,9 +599,9 @@ export function OverallTab({
                 </div>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded p-3 text-sm">
-                <p className="text-amber-900 dark:text-amber-200 font-semibold mb-2">Exchange-Specific Rate Limits</p>
-                <ul className="text-amber-800 dark:text-amber-300 space-y-1 text-xs">
+              <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
+                <p className="text-amber-900 font-semibold mb-2">Exchange-Specific Rate Limits</p>
+                <ul className="text-amber-800 space-y-1 text-xs">
                   <li>• <strong>Bybit:</strong> 100 req/sec for public, 50 req/sec for private</li>
                   <li>• <strong>BingX:</strong> 1000 req/10sec for public, 200 req/10sec for private</li>
                   <li>• <strong>Pionex:</strong> 100 req/sec for public, 50 req/sec for private</li>

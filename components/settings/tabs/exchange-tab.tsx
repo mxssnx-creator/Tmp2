@@ -41,10 +41,42 @@ export function ExchangeTab({
   removeForcedSymbol,
   connections,
 }: ExchangeTabProps) {
-  const { selectedExchange } = useExchange()
+  const { selectedExchange, selectedConnectionId, setSelectedConnectionId } = useExchange()
+  
+  const mainConnections = connections.filter((c: any) => c.is_active_inserted === "1" || c.is_active_inserted === true)
   
   return (
     <Tabs defaultValue="exchange">
+      <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+        <label className="text-sm font-medium mb-2 block">Active Connection</label>
+        <Select 
+          value={selectedConnectionId || "standard"} 
+          onValueChange={(val) => setSelectedConnectionId(val)}
+        >
+          <SelectTrigger className="w-full max-w-md">
+            <SelectValue placeholder="Select connection" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">
+              <div className="flex items-center gap-2">
+                <span>Standard</span>
+                <span className="text-muted-foreground text-xs">(Mock)</span>
+              </div>
+            </SelectItem>
+            {mainConnections.map((conn: any) => (
+              <SelectItem key={conn.id} value={conn.id}>
+                <div className="flex items-center gap-2">
+                  <span>{conn.name || conn.exchange}</span>
+                  <Badge variant="outline" className="text-xs">{conn.exchange}</Badge>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground mt-2">
+          Isolated settings for this connection only
+        </p>
+      </div>
       <TabsContent value="exchange" className="space-y-4">
         {selectedExchange && (
           <div className="bg-muted/50 border rounded-lg p-3">

@@ -1931,9 +1931,6 @@ export default function SettingsPage() {
         </PageHeader>
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            {/* Connection Settings Header */}
-            <ConnectionSettingsHeader />
-
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overall">Overall</TabsTrigger>

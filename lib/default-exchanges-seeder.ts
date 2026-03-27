@@ -29,7 +29,7 @@ const LEGACY_CONNECTION_IDS = [
 
 // Module-level flag to prevent re-seeding
 let seedingCompleted = false
-const SEED_MARKER_KEY = "system:base_connections_seeded_v2"
+const SEED_MARKER_KEY = "system:base_connections_seeded_v3"
 
 /**
  * Backward-compatible entrypoint. Ensures canonical base connections only.
@@ -100,10 +100,10 @@ export async function ensureDefaultExchangesExist() {
         is_testnet: existing?.is_testnet ?? false,
         is_predefined: existing?.is_predefined ?? true,
         is_inserted: existing?.is_inserted ?? "1",
-        // Startup defaults: bybit + bingx pre-assigned to Main panel, others available in Settings only.
-        is_active_inserted: existing?.is_active_inserted ?? (cfg.id === "bybit-x03" || cfg.id === "bingx-x01" ? "1" : "0"),
+        // Startup defaults: all pre-assigned to Main panel and enabled for dashboard
+        is_active_inserted: existing?.is_active_inserted ?? "1",
         is_enabled: existing?.is_enabled ?? "1",
-        is_enabled_dashboard: existing?.is_enabled_dashboard ?? "0",
+        is_enabled_dashboard: existing?.is_enabled_dashboard ?? "1",
         is_active: existing?.is_active ?? "0",
         created_at: existing?.created_at || now,
         updated_at: now,

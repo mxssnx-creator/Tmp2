@@ -2,6 +2,7 @@
 
 
 export const dynamic = "force-dynamic"
+// Page with sidebar and exchange selector
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,6 +12,7 @@ import { Activity, TrendingUp, TrendingDown, RefreshCw, Play, Pause, AlertCircle
 import { toast } from "@/lib/simple-toast"
 import { useExchange } from "@/lib/exchange-context"
 import { usePositionUpdates } from "@/lib/use-websocket"
+import { PageHeader } from "@/components/page-header"
 
 interface Position {
   id: string
@@ -191,20 +193,16 @@ export default function LiveTradingPage() {
    }
 
   return (
-    <div className="space-y-4 p-4">
-       {/* Header */}
-       <div className="flex items-center justify-between">
-         <div>
-           <h1 className="text-2xl font-bold">Live Trading</h1>
-           <p className="text-xs text-muted-foreground mt-1">Real-time position monitoring and management</p>
-         </div>
-        <div className="flex gap-2">
-          <Button
-            variant={isEngineRunning ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsEngineRunning(!isEngineRunning)}
-            className="h-8 text-xs"
-          >
+    <div className="space-y-4">
+      <PageHeader title="Live Trading" description="Real-time position monitoring and management" />
+      <div className="p-4 space-y-4">
+      <div className="flex gap-2">
+        <Button
+          variant={isEngineRunning ? "default" : "outline"}
+          size="sm"
+          onClick={() => setIsEngineRunning(!isEngineRunning)}
+          className="h-8 text-xs"
+        >
             {isEngineRunning ? (
               <>
                 <Pause className="h-3 w-3 mr-1" />

@@ -2,6 +2,7 @@
 
 
 export const dynamic = "force-dynamic"
+// Page with sidebar and exchange selector
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,7 @@ import type { StrategyResult } from "@/lib/strategies"
 import { Activity, TrendingUp, BarChart3, Settings, RefreshCw, Target, Download } from "lucide-react"
 import { toast } from "@/lib/simple-toast"
 import { useExchange } from "@/lib/exchange-context"
+import { PageHeader } from "@/components/page-header"
 import { useStrategyUpdates } from "@/lib/use-websocket"
 
 // Define advanced filter type
@@ -191,10 +193,10 @@ export default function StrategiesPage() {
    }
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4">
       {/* Warning banner */}
       {isDemo && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded p-3">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded p-3 mx-4 mt-4">
           <div className="flex items-center gap-2 text-sm">
             <Activity className="h-4 w-4 text-amber-400 flex-shrink-0" />
             <span className="text-amber-200">Using demo data - switch to a real exchange connection to see live strategies</span>
@@ -202,11 +204,9 @@ export default function StrategiesPage() {
         </div>
       )}
 
-       {/* Header */}
-       <div className="flex items-center justify-between">
-         <div>
-           <h1 className="text-2xl font-bold">Strategies</h1>
-           <p className="text-xs text-muted-foreground mt-1">Advanced filtering, coordination analysis, and performance metrics</p>
+      <PageHeader title="Strategies" description="Advanced filtering, coordination analysis, and performance metrics" />
+      <div className="p-4 space-y-4">
+      <div className="flex gap-2">
          </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="h-8 text-xs">

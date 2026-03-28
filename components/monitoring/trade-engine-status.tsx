@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle, AlertCircle, XCircle, Activity, RefreshCw, Play, Square } from "lucide-react"
+import { CheckCircle, AlertCircle, XCircle, Activity, RefreshCw, Play, Square, Clock, BarChart3 } from "lucide-react"
 
 interface EngineStatus {
   connectionId: string
@@ -26,6 +26,14 @@ interface EngineStatus {
     indicationAvgDuration: number
     strategyAvgDuration: number
     realtimeAvgDuration: number
+    cycleTimeMs?: number
+  }
+  summary?: {
+    symbolsActive?: number
+    prehistoricDataSize?: number
+    indicationTypes?: { direction?: number; move?: number; active?: number; optimal?: number; auto?: number; total?: number }
+    strategyCounts?: { base?: number; main?: number; real?: number }
+    realtimeCycles?: number
   }
 }
 
@@ -227,7 +235,7 @@ export function TradeEngineStatus() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-primary" />
@@ -277,7 +285,7 @@ export function TradeEngineStatus() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Component Health */}
               <div className="space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">Component Health</div>
@@ -295,7 +303,7 @@ export function TradeEngineStatus() {
               </div>
 
               {/* Performance Metrics */}
-              <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
                 <div>
                   <div className="text-muted-foreground">Indications</div>
                   <div className="font-medium">{engine.metrics.indicationCycleCount}</div>
@@ -313,6 +321,14 @@ export function TradeEngineStatus() {
                 </div>
               </div>
 
+              {engine.summary && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px] border-t pt-3">
+                  <div><span className="text-muted-foreground">Symbols:</span> {engine.summary.symbolsActive || 0}</div>
+                  <div><span className="text-muted-foreground">Prehistoric:</span> {engine.summary.prehistoricDataSize || 0}</div>
+                  <div><span className="text-muted-foreground">Cycle(ms):</span> {engine.metrics.cycleTimeMs || 0}</div>
+                  <div><span className="text-muted-foreground">Realtime Cycles:</span> {engine.summary.realtimeCycles || 0}</div>
+                </div>
+              )}
               {/* Controls */}
               <div className="flex gap-2">
                 {engine.status === "running" ? (

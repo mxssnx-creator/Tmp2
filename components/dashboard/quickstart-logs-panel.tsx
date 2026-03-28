@@ -136,10 +136,10 @@ export function QuickstartLogsPanel({ connectionId, className = "" }: Quickstart
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3">
         {/* Progression State Summary */}
         {progressionState && progressionState.cyclesCompleted > 0 && (
-          <div className="grid grid-cols-4 gap-2 p-2 bg-muted rounded-lg text-xs mb-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-2 bg-muted rounded-lg text-xs mb-2">
             <div className="text-center">
               <div className="font-semibold">{progressionState.cyclesCompleted}</div>
               <div className="text-muted-foreground">Cycles</div>
@@ -167,7 +167,7 @@ export function QuickstartLogsPanel({ connectionId, className = "" }: Quickstart
         ) : logs.length === 0 ? (
           <div className="text-sm text-muted-foreground py-4 text-center">No logs yet</div>
         ) : (
-          <ScrollArea className="h-[300px] w-full border rounded-md p-3 bg-muted/50">
+          <ScrollArea className="h-[36vh] w-full border rounded-md p-3 bg-muted/50 overflow-hidden">
             <div className="space-y-2">
               {logs.map((log, idx) => (
                 <div key={idx} className="text-xs font-mono">
@@ -199,7 +199,7 @@ export function QuickstartLogsPanel({ connectionId, className = "" }: Quickstart
               onChange={(e) => setAutoRefresh(e.target.checked)}
               className="rounded"
             />
-            Auto-refresh every 2s
+            Manual refresh only
           </label>
         </div>
       </CardContent>

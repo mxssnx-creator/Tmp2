@@ -110,7 +110,7 @@ export function ProgressionLogsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-96">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Progression Logs - {connectionName}</DialogTitle>
           <DialogDescription>
@@ -120,7 +120,7 @@ export function ProgressionLogsDialog({
 
         {/* Progression State Summary */}
         {progressionState && (
-          <div className="grid grid-cols-4 gap-4 mb-4 p-3 bg-muted rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 p-3 bg-muted rounded-lg text-xs">
             <div className="text-center">
               <div className="text-lg font-semibold">{progressionState.cyclesCompleted || 0}</div>
               <div className="text-xs text-muted-foreground">Cycles</div>
@@ -166,7 +166,7 @@ export function ProgressionLogsDialog({
           </div>
         </div>
 
-        <ScrollArea className="w-full h-64 border rounded-md bg-slate-50 p-4 font-mono text-xs">
+        <ScrollArea className="w-full h-[48vh] border rounded-md bg-slate-50 p-3 font-mono text-xs overflow-hidden">
           {isLoading ? (
             <div className="text-muted-foreground">Loading logs...</div>
           ) : logs.length === 0 ? (
@@ -176,7 +176,7 @@ export function ProgressionLogsDialog({
               {logs.map((log, idx) => {
                 const time = new Date(log.timestamp).toLocaleTimeString()
                 return (
-                  <div key={idx} className="flex gap-2 text-xs">
+                  <div key={idx} className="flex gap-2 text-xs items-start">
                     <span className="text-gray-500 min-w-fit">[{time}]</span>
                     <Badge className={`min-w-fit ${getLevelBadgeColor(log.level)}`}>
                       {log.level.toUpperCase()}
@@ -184,10 +184,10 @@ export function ProgressionLogsDialog({
                     <Badge variant="outline" className="min-w-fit">
                       {log.phase}
                     </Badge>
-                    <span className="flex-1 break-all text-gray-700">{log.message}</span>
+                    <span className="flex-1 min-w-0 break-words text-gray-700">{log.message}</span>
                     {log.details && (
-                      <span className="text-gray-500 max-w-xs truncate">
-                        {JSON.stringify(log.details)}
+                      <span className="text-gray-500 max-w-xs break-words whitespace-pre-wrap">
+                        {JSON.stringify(log.details, null, 2)}
                       </span>
                     )}
                   </div>
@@ -197,7 +197,7 @@ export function ProgressionLogsDialog({
           )}
         </ScrollArea>
 
-        <div className="mt-4 text-xs text-muted-foreground">
+        <div className="mt-4 text-xs text-muted-foreground border-t pt-3">
           <p>Logs are retained for 24 hours and show all engine operations including errors, phase transitions, and performance metrics.</p>
         </div>
       </DialogContent>

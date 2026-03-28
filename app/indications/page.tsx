@@ -2,6 +2,7 @@
 
 
 export const dynamic = "force-dynamic"
+// Page with sidebar and exchange selector
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { Activity, TrendingUp, Zap, RefreshCw, Download, BarChart3 } from "lucid
 import { toast } from "@/lib/simple-toast"
 import { useExchange } from "@/lib/exchange-context"
 import { useIndicationUpdates } from "@/lib/use-websocket"
+import { PageHeader } from "@/components/page-header"
 
 interface Indication {
   id: string
@@ -207,22 +209,18 @@ export default function IndicationsPage() {
   }
 
   return (
-    <div className="space-y-4 p-4">
-       {/* Header */}
-       <div className="flex items-center justify-between">
-         <div>
-           <h1 className="text-2xl font-bold">Indications</h1>
-           <p className="text-xs text-muted-foreground mt-1">Trading signals with confidence and strength metrics</p>
-         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="h-8 text-xs">
-            <RefreshCw className="h-3 w-3 mr-1" />
-            Refresh
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 text-xs">
-            <Download className="h-3 w-3 mr-1" />
-            Export
-          </Button>
+    <div className="space-y-4">
+      <PageHeader title="Indications" description="Trading signals with confidence and strength metrics" />
+      <div className="p-4 space-y-4">
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="h-8 text-xs">
+          <RefreshCw className="h-3 w-3 mr-1" />
+          Refresh
+        </Button>
+        <Button variant="outline" size="sm" className="h-8 text-xs">
+          <Download className="h-3 w-3 mr-1" />
+          Export
+        </Button>
         </div>
       </div>
 

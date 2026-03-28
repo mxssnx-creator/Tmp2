@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Zap } from "lucide-react"
+import { RefreshCw, Zap } from "lucide-react"
 import { useExchange } from "@/lib/exchange-context"
 
 interface Connection {
@@ -27,12 +28,16 @@ const STANDARD_OPTION: Connection = {
 }
 
 export function ExchangeSelectorTop() {
-  const { selectedConnectionId, setSelectedConnectionId, activeConnections, isLoading } = useExchange()
+  const { selectedConnectionId, setSelectedConnectionId, activeConnections, isLoading, loadActiveConnections } = useExchange()
 
   const currentConnection = activeConnections.find((c) => c.id === selectedConnectionId) || STANDARD_OPTION
 
   const handleSelectConnection = (id: string) => {
     setSelectedConnectionId(id)
+  }
+
+  const handleRefresh = async () => {
+    await loadActiveConnections()
   }
 
   const defaultValue = selectedConnectionId || "standard"
@@ -58,9 +63,9 @@ export function ExchangeSelectorTop() {
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm font-medium text-foreground">Exchange:</span>
-      <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3 w-full">
+      <span className="text-sm font-medium text-foreground shrink-0">Exchange:</span>
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         <Select value={defaultValue} onValueChange={handleSelectConnection}>
           <SelectTrigger className="w-[180px] h-8 text-sm border-input bg-background hover:bg-muted">
             <div className="flex items-center gap-2">
@@ -96,6 +101,9 @@ export function ExchangeSelectorTop() {
         </Select>
         {renderStatusBadges()}
       </div>
+      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleRefresh} aria-label="Refresh connections">
+        <RefreshCw className="h-3.5 w-3.5" />
+      </Button>
     </div>
   )
 }

@@ -19,7 +19,7 @@ export default function DashboardLayout({
       <ExchangeProvider>
         <ConnectionStateProvider>
           <SidebarProvider>
-            <div className="flex h-screen overflow-hidden bg-background">
+            <div className="flex min-h-screen overflow-hidden bg-background">
               <AppSidebar />
               <main className="flex-1 overflow-auto">
                 {children}

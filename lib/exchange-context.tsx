@@ -41,7 +41,7 @@ export function ExchangeProvider({ children }: { children: ReactNode }) {
         const connections = data.connections || []
         
         const mainConnections = connections.filter((c: any) => {
-          return c.is_active_inserted === "1" || c.is_active_inserted === true
+          return c.is_active_inserted === "1" || c.is_active_inserted === true || c.is_dashboard_inserted === "1" || c.is_dashboard_inserted === true
         })
         
         setActiveConnections(mainConnections)

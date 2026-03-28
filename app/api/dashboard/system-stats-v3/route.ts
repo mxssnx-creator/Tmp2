@@ -39,17 +39,13 @@ export async function GET() {
     
     // BASE CONNECTIONS = All base exchange connections (predefined or user-created)
     // that are marked as enabled (is_enabled=1) in Settings
-    const baseConnections = connections.filter((c: any) => {
-      return isBaseExchange(c)
-    })
-    
-    // ENABLED BASE = Base connections that are enabled in Settings
+    const baseConnections = connections.filter((c: any) => isBaseExchange(c))
     const enabledBase = baseConnections.filter((c: any) => isTruthyFlag(c.is_enabled))
     console.log(`[v0] [SystemStats] Base connections: ${baseConnections.length}, enabled: ${enabledBase.length}`)
     
     // ACTIVE PANEL = Connections marked as active-inserted (shown in Active Connections panel)
     // These can be predefined templates OR user-created connections
-    const activeInsertedAll = allConnections.filter((c: any) => isConnectionInActivePanel(c))
+    const activeInsertedAll = connections.filter((c: any) => isConnectionInActivePanel(c))
     console.log(`[v0] [SystemStats] In Active panel: ${activeInsertedAll.length}`)
     
     // ENABLED ON DASHBOARD = Active connections that user has toggled ON
@@ -76,19 +72,17 @@ export async function GET() {
     }
     const globalStatus = globalEngineState.status || "stopped"
 
-    // Main Engine: runs when any connection has main_enabled (is_enabled_dashboard=true)
-    // This is the Main Trade Engine for processing indications, strategies, pseudo positions
-    // Main Engine is INDEPENDENT from Live Trade and Preset
-    const mainConnections = allConnections.filter((c: any) => isConnectionDashboardEnabled(c))
+    // Main Connections: all connections assigned to the active/main panel
+    const mainConnections = connections.filter((c: any) => isConnectionInActivePanel(c))
     const mainEnabled = mainConnections.length > 0
     
     // Live Trade: runs independently when is_live_trade=true (for real exchange position mirroring)
     // Does NOT require Main Engine to be running
-    const liveTradeConnections = allConnections.filter((c: any) => isConnectionLiveTradeEnabled(c))
+    const liveTradeConnections = connections.filter((c: any) => isConnectionLiveTradeEnabled(c))
     const liveTradeEnabled = liveTradeConnections.length > 0
     
     // Preset: runs independently when is_preset_trade=true (for preset strategies)
-    const presetTradeConnections = allConnections.filter((c: any) => isConnectionPresetTradeEnabled(c))
+    const presetTradeConnections = connections.filter((c: any) => isConnectionPresetTradeEnabled(c))
     const presetTradeEnabled = presetTradeConnections.length > 0
     
     // Main Engine status: running when main_enabled, regardless of live/preset

@@ -7,6 +7,11 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
+function toNumber(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -70,6 +75,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         lastCycleTime: progressionState.lastCycleTime,
         prehistoricCyclesCompleted: progressionState.prehistoricCyclesCompleted,
         prehistoricPhaseActive: progressionState.prehistoricPhaseActive,
+        realtimeCycleCount: toNumber(engineState?.realtime_cycle_count),
+        cycleTimeMs: toNumber(engineState?.last_cycle_duration),
+        intervalsProcessed: toNumber(await client.get(`intervals:${connectionId}:processed_count`).catch(() => 0)),
+        indicationsCount: toNumber(await client.get(`indications:${connectionId}:count`).catch(() => 0)),
+        strategiesCount: toNumber(await client.get(`strategies:${connectionId}:count`).catch(() => 0)),
+        strategyEvaluatedBase: toNumber(await client.get(`strategies:${connectionId}:base:evaluated`).catch(() => 0)),
+        strategyEvaluatedMain: toNumber(await client.get(`strategies:${connectionId}:main:evaluated`).catch(() => 0)),
+        strategyEvaluatedReal: toNumber(await client.get(`strategies:${connectionId}:real:evaluated`).catch(() => 0)),
+        prehistoricSymbolsProcessed: toNumber(engineState?.config_set_symbols_processed),
+        prehistoricCandlesProcessed: toNumber(engineState?.config_set_candles_processed),
       },
       enginePhase: engineProgression ? {
         phase: engineProgression.phase,

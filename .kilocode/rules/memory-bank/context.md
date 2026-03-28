@@ -76,6 +76,12 @@ Phases 1-6 of the comprehensive system remediation are complete, including Phase
 - [x] Updated quickstart stats API to read actual counter/state keys instead of legacy empty set keys, restoring non-zero indication/strategy/interval/cycle metrics after enable.
 - [x] Updated progression state writes to persist `last_cycle_time`, improving progression accuracy and active-cycle visibility in dialogs/APIs.
 
+### Session 10: Progression Endpoint Alignment + Realtime Error Visibility (COMPLETED)
+- [x] Fixed progression endpoints to read real indication/strategy counter keys instead of obsolete key patterns that reported zero processing.
+- [x] Expanded progression APIs with intervals processed, realtime cycle count, cycle time in ms, total evaluated indications/strategies, and prehistoric processing totals for symbol/candle/result/error coverage.
+- [x] Corrected quickstart engine-state reads to use `getSettings(trade_engine_state:*)` instead of invalid Redis hash access on a serialized settings key.
+- [x] Added realtime processor error progression logging so runtime failures surface in main connection logs instead of failing silently.
+
 ### Session 7: Phase 5-6 Implementation (COMPLETED)
 - [x] **Phase 5.1**: Created `lib/indication-config-manager.ts` (222 lines)
   - IndicationConfigManager class with CRUD operations for config sets
@@ -525,6 +531,7 @@ Current focus is runtime correctness and operational workflow completeness for t
 
 | Date | Changes |
 |------|---------|
+| 2026-03-28 | Aligned progression and quickstart APIs with real stored state/counter keys, added realtime error log surfacing, and exposed processed intervals/realtime/prehistory/evaluation metrics directly in progression responses. |
 | 2026-03-28 | Repaired zero-result/zero-cycle runtime visibility: persisted last-cycle metrics, added Redis strategy evaluation counters, corrected quickstart stats to read real counter/state keys, and restored accurate progression timing for main/quickstart logging surfaces. |
 | 2026-03-28 | Fixed processing/logging coverage gaps: manual-refresh log dialogs, comprehensive detailed-log telemetry expansion (prehistoric + indication/strategy/realtime counts), stronger prehistoric error tracking, and auto-start eligibility correction to stop unintended global/main engine restarts. |
 | 2026-03-28 | **PHASE 5-6 COMPLETE**: Created indication-config-manager.ts (222 lines) and strategy-config-manager.ts (331 lines) for independent config sets; added non-blocking prehistoric data loading in engine-manager; production readiness 95+/100 ✅ |

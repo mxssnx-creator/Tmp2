@@ -6,6 +6,7 @@
 
 import { getSettings, setSettings, getMarketData, getRedisClient } from "@/lib/redis-db"
 import { PseudoPositionManager } from "./pseudo-position-manager"
+import { logProgressionEvent } from "@/lib/engine-progression-logs"
 
 export class RealtimeProcessor {
   private connectionId: string
@@ -44,6 +45,9 @@ export class RealtimeProcessor {
       await Promise.all(activePositions.map((position) => this.processPosition(position)))
     } catch (error) {
       console.error("[v0] Failed to process realtime updates:", error)
+      await logProgressionEvent(this.connectionId, "realtime_error", "error", "Realtime processor failed", {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 

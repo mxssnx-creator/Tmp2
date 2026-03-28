@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAllConnections, initRedis, updateConnection, setSettings, getRedisClient,
+import { getAllConnections, initRedis, updateConnection, setSettings, getSettings, getRedisClient,
   buildMainConnectionEnableUpdate } from "@/lib/redis-db"
 import { API_VERSIONS } from "@/lib/system-version"
 import { logProgressionEvent, getProgressionLogs } from "@/lib/engine-progression-logs"
@@ -357,7 +357,7 @@ export async function POST(request: Request) {
     // Calculate comprehensive engine counts from Redis
     const startStatsTime = Date.now()
     
-    const engineState = await client.hgetall(`settings:trade_engine_state:${connectionId}`).catch(() => ({} as Record<string, string>)) || {}
+    const engineState = (await getSettings(`trade_engine_state:${connectionId}`)) || {}
 
     // Basic counts
     const indicationsCount = toNumber(await client.get(`indications:${connectionId}:count`).catch(() => 0))

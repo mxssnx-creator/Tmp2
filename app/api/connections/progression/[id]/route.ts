@@ -6,6 +6,11 @@ import { getGlobalTradeEngineCoordinator } from "@/lib/trade-engine"
 
 export const dynamic = "force-dynamic"
 
+function toNumber(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
 /**
  * GET /api/connections/progression/[id]
  * Returns comprehensive progression data for an active connection
@@ -68,13 +73,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     let indicationsCount = 0
     let strategiesCount = 0
     try {
-      // Check indication keys
-      const keys = await client.keys(`indication:${connectionId}:*`)
-      indicationsCount = keys.length
-      
-      // Check strategy keys
-      const stratKeys = await client.keys(`strategy:${connectionId}:*`)
-      strategiesCount = stratKeys.length
+      indicationsCount =
+        toNumber(await client.get(`indications:${connectionId}:count`).catch(() => 0)) ||
+        (await client.keys(`indications:${connectionId}:*`).catch(() => [])).length
+
+      strategiesCount =
+        toNumber(await client.get(`strategies:${connectionId}:count`).catch(() => 0)) ||
+        (await client.keys(`strategies:${connectionId}:*`).catch(() => [])).length
     } catch {
       indicationsCount = 0
       strategiesCount = 0
@@ -191,7 +196,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       running: engineRunning,
     })
 
-    const response = {
+     const response = {
       success: true,
       connectionId,
       connectionName: connName,
@@ -238,6 +243,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       metrics: {
         indicationsCount,
         strategiesCount,
+        intervalsProcessed: toNumber(await client.get(`intervals:${connectionId}:processed_count`).catch(() => 0)),
         engineRunning,
         isEngineRunning,
         hasRecentActivity,
@@ -245,6 +251,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         engineStateStatus: engineState?.status || "unknown",
         indicationCycleCount,
         strategyCycleCount,
+        realtimeCycleCount: toNumber(engineState?.realtime_cycle_count),
+        cycleTimeMs: toNumber(engineState?.last_cycle_duration),
+        totalStrategiesEvaluated: toNumber(engineState?.total_strategies_evaluated),
+        totalIndicationsEvaluated: toNumber(engineState?.total_indications_evaluated),
+        prehistoricSymbolsTotal: toNumber(engineState?.config_set_symbols_total),
+        prehistoricSymbolsProcessed: toNumber(engineState?.config_set_symbols_processed),
+        prehistoricCandlesProcessed: toNumber(engineState?.config_set_candles_processed),
+        prehistoricIndicationResults: toNumber(engineState?.config_set_indication_results),
+        prehistoricStrategyPositions: toNumber(engineState?.config_set_strategy_positions),
+        prehistoricErrors: toNumber(engineState?.config_set_errors),
         progressionCyclesCompleted: progressionState.cyclesCompleted,
         lastIndicationRun: engineState?.last_indication_run || null,
         lastStrategyRun: engineState?.last_strategy_run || null,

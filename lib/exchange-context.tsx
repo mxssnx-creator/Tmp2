@@ -25,16 +25,14 @@ export function ExchangeProvider({ children }: { children: ReactNode }) {
   const LOAD_COOLDOWN = 60000 // 60 seconds between refreshes
 
   const loadActiveConnections = async () => {
-    // Prevent concurrent requests and excessive refreshes
     if (loadingRef.current) return
     if (Date.now() - lastLoadRef.current < LOAD_COOLDOWN) return
 
     loadingRef.current = true
     setIsLoading(true)
     try {
-      console.log("[v0] [Exchange Context] Loading dashboard active connections for exchange selector...")
-      // Load ONLY connections that are added to active list (is_enabled_dashboard="1")
-      const response = await fetch("/api/settings/connections?dashboard=true", {
+      console.log("[v0] [Exchange Context] Loading Main Connections...")
+      const response = await fetch("/api/settings/connections", {
         cache: "no-store",
         headers: { "Cache-Control": "no-cache" },
       })
@@ -42,26 +40,16 @@ export function ExchangeProvider({ children }: { children: ReactNode }) {
         const data = await response.json()
         const connections = data.connections || []
         
-        // Filter to only show dashboard-active connections (is_enabled_dashboard=1 or true)
-        const dashboardActive = connections.filter((c: any) => {
-          const isDashboardEnabled = c.is_enabled_dashboard === true || c.is_enabled_dashboard === "1" || c.is_enabled_dashboard === "true"
-          return isDashboardEnabled
+        const mainConnections = connections.filter((c: any) => {
+          return c.is_active_inserted === "1" || c.is_active_inserted === true
         })
         
-        setActiveConnections(dashboardActive)
-        console.log("[v0] [Exchange Context] Loaded", dashboardActive.length, "dashboard-active connections from", connections.length, "total")
+        setActiveConnections(mainConnections)
+        console.log("[v0] [Exchange Context] Loaded", mainConnections.length, "Main Connections")
         
-        // Auto-select first connection if none selected
-        if (dashboardActive.length > 0) {
-          const selectedById = selectedConnectionId
-            ? dashboardActive.find((connection: any) => connection.id === selectedConnectionId)
-            : null
-          const nextSelected = selectedById || dashboardActive[0]
-          setSelectedConnectionId(nextSelected.id)
-          setSelectedExchange(nextSelected.exchange || null)
-        } else {
-          setSelectedConnectionId(null)
-          setSelectedExchange(null)
+        if (mainConnections.length > 0 && !selectedConnectionId) {
+          setSelectedConnectionId(mainConnections[0].id)
+          setSelectedExchange(mainConnections[0].exchange || null)
         }
       }
     } catch (error) {

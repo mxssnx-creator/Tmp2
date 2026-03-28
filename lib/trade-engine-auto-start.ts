@@ -1,6 +1,9 @@
 /**
  * Trade Engine Auto-Start Service
  * Automatically starts trade engines for enabled connections via their toggles
+ * 
+ * MODIFIED: Prevents automatic restarting to address user requirement.
+ * Engines will only start when explicitly enabled by user via dashboard toggle.
  */
 
 import { getGlobalTradeEngineCoordinator } from "./trade-engine"
@@ -16,7 +19,8 @@ export function isAutoStartInitialized(): boolean {
 }
 
 /**
- * Initialize and start trade engines automatically
+ * Initialize trade engine auto-start service WITHOUT automatic engine starting.
+ * Engines will only start when explicitly toggled on by user.
  */
 export async function initializeTradeEngineAutoStart(): Promise<void> {
   if (autoStartInitialized) {
@@ -29,7 +33,7 @@ export async function initializeTradeEngineAutoStart(): Promise<void> {
   }
 
   try {
-    console.log("[v0] [Auto-Start] Starting trade engine auto-initialization...")
+    console.log("[v0] [Auto-Start] Starting trade engine auto-initialization (manual start mode)...")
     const coordinator = getGlobalTradeEngineCoordinator()
     
     // Check if Global Trade Engine Coordinator is running
@@ -39,64 +43,15 @@ export async function initializeTradeEngineAutoStart(): Promise<void> {
     const globalRunning = globalState?.status === "running"
     
     if (!globalRunning) {
-      console.log("[v0] [Auto-Start] Global Trade Engine is not running - skipping auto-start. Engines will resume when global is started.")
+      console.log("[v0] [Auto-Start] Global Trade Engine is not running - skipping auto-start. Engines will start when global is started and user enables them.")
       autoStartInitialized = true
       startConnectionMonitoring()
       return
     }
     
-    const connections = await getAllConnections()
-
-    console.log("[v0] [Auto-Start] Retrieved", connections?.length || 0, "connections from database")
-
-    // Ensure connections is an array
-    if (!Array.isArray(connections)) {
-      console.error("[v0] [Auto-Start] ERROR: connections is not an array", typeof connections)
-      autoStartInitialized = true
-      startConnectionMonitoring()
-      return
-    }
-
-    // Filter only user-enabled main-processing connections.
-    // This prevents disabled main connections from being auto-restarted.
-    const enabledConnections = connections.filter((c) => {
-      const isMainProcessing = isConnectionMainProcessing(c)
-      const hasValidCredentials = hasConnectionCredentials(c, 20, false)
-      return isMainProcessing && hasValidCredentials
-    })
-
-    console.log(`[v0] [Auto-Start] Found ${enabledConnections.length} eligible connections (main-assigned + dashboard-enabled + valid keys) out of ${connections.length} total`)
-
-    if (enabledConnections.length === 0) {
-      console.log("[v0] [Auto-Start] No enabled connections - monitoring for changes...")
-      autoStartInitialized = true
-      startConnectionMonitoring()
-      return
-    }
-
-    const settings = await loadSettingsAsync()
-    const indicationInterval = settings.mainEngineIntervalMs ? settings.mainEngineIntervalMs / 1000 : 1
-    const strategyInterval = settings.strategyUpdateIntervalMs ? settings.strategyUpdateIntervalMs / 1000 : 1
-    const realtimeInterval = settings.realtimeIntervalMs ? settings.realtimeIntervalMs / 1000 : 0.2
-
-    let successCount = 0
-
-    for (const connection of enabledConnections) {
-      try {
-        await coordinator.startEngine(connection.id, {
-          connectionId: connection.id,
-          indicationInterval,
-          strategyInterval,
-          realtimeInterval,
-        })
-        successCount++
-        console.log(`[v0] [Auto-Start] ✓ Started trade engine for ${connection.name}`)
-      } catch (error) {
-        console.error(`[v0] [Auto-Start] ✗ Failed to start ${connection.name}:`, error)
-      }
-    }
-
-    console.log(`[v0] [Auto-Start] ✓ Trade engines started: ${successCount}/${enabledConnections.length}`)
+    // Just initialize monitoring - DO NOT auto-start engines
+    // Engines will only start when user explicitly enables them via dashboard toggle
+    console.log("[v0] [Auto-Start] Auto-start monitoring initialized (engines will NOT start automatically)")
     autoStartInitialized = true
     startConnectionMonitoring()
   } catch (error) {
@@ -107,7 +62,8 @@ export async function initializeTradeEngineAutoStart(): Promise<void> {
 }
 
 /**
- * Monitor for connection changes and auto-start new engines
+ * Monitor for connection changes - DO NOT auto-start engines
+ * Only monitors for changes, engines must be started manually by user
  */
 function startConnectionMonitoring(): void {
   if (autoStartTimer) {
@@ -157,9 +113,9 @@ function startConnectionMonitoring(): void {
         .sort()
         .join(",")
 
-      // If enabled connection set changed, log it
+      // If enabled connection set changed, log it (but don't auto-start)
       if (enabledSignature !== lastEnabledSignature) {
-        console.log(`[v0] [Monitor] Enabled connections changed: ${lastEnabledCount} -> ${enabledConnections.length}`)
+        console.log(`[v0] [Monitor] Enabled connections changed: ${lastEnabledCount} -> ${enabledConnections.length} (manual start required)`)
         lastEnabledCount = enabledConnections.length
         lastEnabledSignature = enabledSignature
       }
@@ -172,31 +128,9 @@ function startConnectionMonitoring(): void {
         settingsCacheTime = Date.now()
       }
 
-      const coordinator = getGlobalTradeEngineCoordinator()
-
-      for (const connection of enabledConnections) {
-        try {
-          // Check if engine is already running for this connection
-          const engineStatus = await coordinator.getEngineStatus(connection.id)
-
-          if (!engineStatus || engineStatus.status === "stopped") {
-            console.log(`[v0] [Monitor] Auto-starting trade engine for: ${connection.name}`)
-
-            if (connection.api_key && connection.api_secret) {
-              await coordinator.startEngine(connection.id, {
-                connectionId: connection.id,
-                indicationInterval: settings.mainEngineIntervalMs ? settings.mainEngineIntervalMs / 1000 : 1,
-                strategyInterval: settings.strategyUpdateIntervalMs ? settings.strategyUpdateIntervalMs / 1000 : 1,
-                realtimeInterval: settings.realtimeIntervalMs ? settings.realtimeIntervalMs / 1000 : 0.2,
-              })
-
-              console.log(`[v0] [Monitor] ✓ Trade engine auto-started: ${connection.name}`)
-            }
-          }
-        } catch (error) {
-          console.warn(`[v0] [Monitor] Failed to auto-start ${connection.name}:`, error)
-        }
-      }
+      // NOTE: Not auto-starting engines - waiting for explicit user action
+      // Engines must be started via dashboard toggle or manual start
+      
     } catch (error) {
       // Log but don't crash - gracefully handle Redis errors
       if (error instanceof Error && error.message.includes("Redis credentials")) {

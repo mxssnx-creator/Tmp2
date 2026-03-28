@@ -62,6 +62,18 @@ Phases 1-6 of the comprehensive system remediation are complete, including Phase
 
 ## Recently Completed
 
+### Session 11: Main Connection Logging Enhancement & Auto-Restart Prevention (COMPLETED)
+- [x] Enhanced main connection log dialog (`/api/settings/connections/[id]/log`) with comprehensive prehistoric data processing info including symbols processed, cycles completed, and phase status
+- [x] Added detailed indication counts by type (direction, move, active, optimal, auto) to main connection logs
+- [x] Added strategy count sets and evaluated counts for independent strategies (base, main, real) with pending calculations
+- [x] Enhanced engine performance metrics with cycle time in ms, intervals processed, and indications/strategies counts
+- [x] Fixed unintended automatic engine restarts by modifying trade-engine-auto-start.ts to prevent auto-starting engines - engines now only start when explicitly enabled by user via dashboard toggle
+- [x] Updated progression state manager to track prehistoric data processing metrics including candles processed and symbols processed count
+- [x] Enhanced quickstart logs panel to display comprehensive progression state including prehistoric processing, indication types, strategy evaluations, and engine performance metrics
+- [x] Improved connection log dialog UI with organized sections for prehistoric data, indications by type, strategy evaluation, and engine performance
+- [x] Ensured scrolling works correctly in all log dialogs with proper styling and text flow
+- [x] Made log refresh manual-only by button as requested, removing any automatic polling
+
 ### Session 8: Logging/Progression Coverage + Auto-Restart Fix (COMPLETED)
 - [x] Disabled automatic polling in quickstart/progression/detailed/main connection log dialogs and switched to explicit manual refresh controls for deterministic log snapshots.
 - [x] Expanded detailed logs backend summary (`/api/trade-engine/detailed-logs`) with comprehensive aggregated telemetry: prehistoric processing (symbols, candles, errors, duration), indication type counts (direction/move/active/optimal/auto), independent strategy counts (base/main/real), realtime cycle coverage, and cycle-time metrics in ms.
@@ -531,6 +543,7 @@ Current focus is runtime correctness and operational workflow completeness for t
 
 | Date | Changes |
 |------|---------|
+| 2026-03-28 | Enhanced main connection log dialog with comprehensive prehistoric data processing, indication types, strategy evaluations, and engine performance metrics; fixed unintended automatic engine restarts; ensured manual refresh only for log dialogs |
 | 2026-03-28 | Aligned progression and quickstart APIs with real stored state/counter keys, added realtime error log surfacing, and exposed processed intervals/realtime/prehistory/evaluation metrics directly in progression responses. |
 | 2026-03-28 | Repaired zero-result/zero-cycle runtime visibility: persisted last-cycle metrics, added Redis strategy evaluation counters, corrected quickstart stats to read real counter/state keys, and restored accurate progression timing for main/quickstart logging surfaces. |
 | 2026-03-28 | Fixed processing/logging coverage gaps: manual-refresh log dialogs, comprehensive detailed-log telemetry expansion (prehistoric + indication/strategy/realtime counts), stronger prehistoric error tracking, and auto-start eligibility correction to stop unintended global/main engine restarts. |

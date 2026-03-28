@@ -25,6 +25,57 @@ type LogSummary = {
   phases?: Record<string, number>
   latestTimestamp?: string | null
   oldestTimestamp?: string | null
+  
+  // Enhanced summary for detailed logging
+  prehistoricData?: {
+    cyclesCompleted: number
+    symbolsProcessed: number
+    candlesProcessed: number
+    phaseActive: boolean
+    lastUpdate: string | null
+  }
+  
+  indicationsCounts?: {
+    direction: number
+    move: number
+    active: number
+    optimal: number
+    auto: number
+  }
+  
+  strategyCounts?: {
+    base: {
+      total: number
+      evaluated: number
+      pending: number
+    }
+    main: {
+      total: number
+      evaluated: number
+      pending: number
+    }
+    real: {
+      total: number
+      evaluated: number
+      pending: number
+    }
+  }
+  
+  enginePerformance?: {
+    cycleTimeMs: number
+    cyclesCompleted: number
+    successfulCycles: number
+    failedCycles: number
+    cycleSuccessRate: number
+    totalTrades: number
+    successfulTrades: number
+    tradeSuccessRate: number
+    totalProfit: number
+    lastCycleTime: string | null
+    intervalsProcessed: number
+    indicationsCount: number
+    strategiesCount: number
+  }
 }
 
 export function ConnectionLogDialog({ open, onOpenChange, connectionId, connectionName }: ConnectionLogDialogProps) {
@@ -97,26 +148,149 @@ export function ConnectionLogDialog({ open, onOpenChange, connectionId, connecti
         ) : (
           <div className="space-y-4">
             {/* Summary */}
-            {summary && (
-              <div className="grid grid-cols-4 gap-4">
-                <div className="p-3 border rounded-lg text-center">
-                  <div className="text-2xl font-bold">{summary.total || 0}</div>
-                  <div className="text-sm text-muted-foreground">Total Logs</div>
-                </div>
-                <div className="p-3 border rounded-lg text-center">
-                  <div className="text-2xl font-bold text-red-500">{summary.errors || 0}</div>
-                  <div className="text-sm text-muted-foreground">Errors</div>
-                </div>
-                <div className="p-3 border rounded-lg text-center">
-                  <div className="text-2xl font-bold text-yellow-500">{summary.warnings || 0}</div>
-                  <div className="text-sm text-muted-foreground">Warnings</div>
-                </div>
-                <div className="p-3 border rounded-lg text-center">
-                  <div className="text-2xl font-bold text-blue-500">{summary.info || 0}</div>
-                  <div className="text-sm text-muted-foreground">Info</div>
-                </div>
-              </div>
-            )}
+{summary && (
+               <>
+                 {/* Enhanced Summary Cards */}
+                 <div className="grid grid-cols-4 gap-4 mb-4">
+                   <div className="p-3 border rounded-lg text-center">
+                     <div className="text-2xl font-bold">{summary.total || 0}</div>
+                     <div className="text-sm text-muted-foreground">Total Logs</div>
+                   </div>
+                   <div className="p-3 border rounded-lg text-center">
+                     <div className="text-2xl font-bold text-red-500">{summary.errors || 0}</div>
+                     <div className="text-sm text-muted-foreground">Errors</div>
+                   </div>
+                   <div className="p-3 border rounded-lg text-center">
+                     <div className="text-2xl font-bold text-yellow-500">{summary.warnings || 0}</div>
+                     <div className="text-sm text-muted-foreground">Warnings</div>
+                   </div>
+                   <div className="p-3 border rounded-lg text-center">
+                     <div className="text-2xl font-bold text-blue-500">{summary.info || 0}</div>
+                     <div className="text-sm text-muted-foreground">Info</div>
+                   </div>
+                 </div>
+                 
+                 {/* Prehistoric Data Processing */}
+                 {summary.prehistoricData && (
+                   <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                     <div className="flex items-center justify-between mb-2">
+                       <div className="font-medium">Prehistoric Data Processing</div>
+                       <div className="text-xs text-blue-600">
+                         {summary.prehistoricData.phaseActive ? "Active" : "Completed"}
+                       </div>
+                     </div>
+                     <div className="grid grid-cols-3 gap-3 text-sm">
+                       <div>
+                         <div className="font-semibold">{summary.prehistoricData.cyclesCompleted}</div>
+                         <div className="text-xs text-muted-foreground">Cycles</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.prehistoricData.symbolsProcessed}</div>
+                         <div className="text-xs text-muted-foreground">Symbols</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.prehistoricData.candlesProcessed}</div>
+                         <div className="text-xs text-muted-foreground">Candles</div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {/* Indications by Type */}
+                 {summary.indicationsCounts && (
+                   <div className="bg-green-50 rounded-lg p-4 mb-4">
+                     <div className="font-medium mb-2">Indications by Type</div>
+                     <div className="grid grid-cols-2 gap-3 text-sm">
+                       <div>
+                         <div className="font-semibold">{summary.indicationsCounts.direction}</div>
+                         <div className="text-xs text-muted-foreground">Direction</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.indicationsCounts.move}</div>
+                         <div className="text-xs text-muted-foreground">Move</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.indicationsCounts.active}</div>
+                         <div className="text-xs text-muted-foreground">Active</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.indicationsCounts.optimal}</div>
+                         <div className="text-xs text-muted-foreground">Optimal</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.indicationsCounts.auto}</div>
+                         <div className="text-xs text-muted-foreground">Auto</div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {/* Strategy Counts */}
+                 {summary.strategyCounts && (
+                   <div className="bg-purple-50 rounded-lg p-4 mb-4">
+                     <div className="font-medium mb-2">Strategy Evaluation</div>
+                     <div className="grid grid-cols-3 gap-3 text-sm">
+                       <div>
+                         <div className="font-semibold">{summary.strategyCounts.base.evaluated}</div>
+                         <div className="text-xs text-muted-foreground">Base Evaluated</div>
+                         <div className="text-xs">/{summary.strategyCounts.base.total}</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.strategyCounts.main.evaluated}</div>
+                         <div className="text-xs text-muted-foreground">Main Evaluated</div>
+                         <div className="text-xs">/{summary.strategyCounts.main.total}</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.strategyCounts.real.evaluated}</div>
+                         <div className="text-xs text-muted-foreground">Real Evaluated</div>
+                         <div className="text-xs">/{summary.strategyCounts.real.total}</div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {/* Engine Performance */}
+                 {summary.enginePerformance && (
+                   <div className="bg-indigo-50 rounded-lg p-4 mb-4">
+                     <div className="font-medium mb-2">Engine Performance</div>
+                     <div className="grid grid-cols-4 gap-3 text-sm">
+                       <div>
+                         <div className="font-semibold">{summary.enginePerformance.cycleTimeMs}ms</div>
+                         <div className="text-xs text-muted-foreground">Cycle Time</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.enginePerformance.cyclesCompleted}</div>
+                         <div className="text-xs text-muted-foreground">Cycles</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold text-green-600">{summary.enginePerformance.successfulCycles}</div>
+                         <div className="text-xs text-muted-foreground">Successful</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold text-red-600">{summary.enginePerformance.failedCycles}</div>
+                         <div className="text-xs text-muted-foreground">Failed</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.enginePerformance.cycleSuccessRate.toFixed(1)}%</div>
+                         <div className="text-xs text-muted-foreground">Success Rate</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.enginePerformance.totalTrades}</div>
+                         <div className="text-xs text-muted-foreground">Trades</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold text-green-600">{summary.enginePerformance.successfulTrades}</div>
+                         <div className="text-xs text-muted-foreground">Winning</div>
+                       </div>
+                       <div>
+                         <div className="font-semibold">{summary.enginePerformance.tradeSuccessRate.toFixed(1)}%</div>
+                         <div className="text-xs text-muted-foreground">Trade Success</div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+               </>
+             )}
 
             <Separator />
 

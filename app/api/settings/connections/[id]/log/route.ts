@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getAllConnections } from "@/lib/redis-db"
 import { getProgressionLogs } from "@/lib/engine-progression-logs"
 import { WorkflowLogger } from "@/lib/workflow-logger"
+import { initRedis, getRedisClient, getSettings } from "@/lib/redis-db"
+import { ProgressionStateManager } from "@/lib/progression-state-manager"
 
 type LogLevel = "error" | "warn" | "warning" | "info" | "debug"
 
@@ -16,12 +18,18 @@ function normalizeLogLevel(level: unknown): LogLevel {
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
+    const connectionId = id
+    
+    await initRedis()
+    
     const allConnections = await getAllConnections()
     const connection = allConnections.find((conn: any) => conn.id === id) || null
 
-    const [progressionLogs, workflowLogs] = await Promise.all([
+    const [progressionLogs, workflowLogs, progressionState, engineState] = await Promise.all([
       getProgressionLogs(id),
       WorkflowLogger.getLogs(id, 100),
+      ProgressionStateManager.getProgressionState(connectionId),
+      getSettings(`trade_engine_state:${connectionId}`)
     ])
 
     const mappedProgressionLogs = progressionLogs.map((log) => ({
@@ -66,6 +74,69 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       return acc
     }, {})
 
+    // Enhanced summary with prehistoric data, indications, strategies, and cycle info
+    const enhancedSummary = {
+      total: logs.length,
+      ...levelSummary,
+      phases: phaseSummary,
+      latestTimestamp: logs[0]?.timestamp || null,
+      oldestTimestamp: logs[logs.length - 1]?.timestamp || null,
+      
+      // Prehistoric data processing info
+      prehistoricData: {
+        cyclesCompleted: progressionState.prehistoricCyclesCompleted || 0,
+        symbolsProcessed: Array.isArray(progressionState.prehistoricSymbolsProcessed) ? progressionState.prehistoricSymbolsProcessed.length : 0,
+        candlesProcessed: 0, // Not directly tracked in ProgressionState, using 0 as placeholder
+        phaseActive: progressionState.prehistoricPhaseActive || false,
+        lastUpdate: progressionState.lastUpdate?.toISOString() || null
+      },
+      
+      // Indications and strategies counts (using available properties)
+      indicationsCounts: {
+        direction: 0, // Not directly tracked, using 0 as placeholder
+        move: 0, // Not directly tracked, using 0 as placeholder
+        active: 0, // Not directly tracked, using 0 as placeholder
+        optimal: 0, // Not directly tracked, using 0 as placeholder
+        auto: 0 // Not directly tracked, using 0 as placeholder
+      },
+      
+      // Strategy count sets and evaluated counts (using available properties)
+      strategyCounts: {
+        base: {
+          total: 0, // Not directly tracked, using 0 as placeholder
+          evaluated: 0, // Not directly tracked, using 0 as placeholder
+          pending: 0
+        },
+        main: {
+          total: 0, // Not directly tracked, using 0 as placeholder
+          evaluated: 0, // Not directly tracked, using 0 as placeholder
+          pending: 0
+        },
+        real: {
+          total: 0, // Not directly tracked, using 0 as placeholder
+          evaluated: 0, // Not directly tracked, using 0 as placeholder
+          pending: 0
+        }
+      },
+      
+      // Engine performance info
+      enginePerformance: {
+        cycleTimeMs: 0, // Not directly tracked in ProgressionState, using 0 as placeholder
+        cyclesCompleted: progressionState.cyclesCompleted || 0,
+        successfulCycles: progressionState.successfulCycles || 0,
+        failedCycles: progressionState.failedCycles || 0,
+        cycleSuccessRate: progressionState.cycleSuccessRate || 0,
+        totalTrades: progressionState.totalTrades || 0,
+        successfulTrades: progressionState.successfulTrades || 0,
+        tradeSuccessRate: progressionState.tradeSuccessRate || 0,
+        totalProfit: progressionState.totalProfit || 0,
+        lastCycleTime: progressionState.lastCycleTime?.toISOString() || null,
+        intervalsProcessed: 0, // Not directly tracked, using 0 as placeholder
+        indicationsCount: 0, // Not directly tracked, using 0 as placeholder
+        strategiesCount: 0 // Not directly tracked, using 0 as placeholder
+      }
+    }
+
     return NextResponse.json({
       success: true,
       connection: connection
@@ -81,13 +152,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
           }
         : null,
       logs: logs || [],
-      summary: {
-        total: logs.length,
-        ...levelSummary,
-        phases: phaseSummary,
-        latestTimestamp: logs[0]?.timestamp || null,
-        oldestTimestamp: logs[logs.length - 1]?.timestamp || null,
-      },
+      summary: enhancedSummary,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {

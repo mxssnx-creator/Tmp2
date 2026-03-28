@@ -28,6 +28,24 @@ interface ProgressionState {
   failedCycles: number
   cycleSuccessRate: number
   totalTrades: number
+  successfulTrades: number
+  totalProfit: number
+  tradeSuccessRate?: number
+  lastUpdate: Date
+  prehistoricCyclesCompleted?: number
+  prehistoricSymbolsProcessed?: string[]
+  prehistoricPhaseActive?: boolean
+  engine_cycles_total?: number
+  lastCycleTime?: Date | null
+  cycleTimeMs?: number
+  intervalsProcessed?: number
+  indicationsCount?: number
+  strategiesCount?: number
+  strategyEvaluatedBase?: number
+  strategyEvaluatedMain?: number
+  strategyEvaluatedReal?: number
+  prehistoricSymbolsProcessedCount?: number
+  prehistoricCandlesProcessed?: number
 }
 
 export function QuickstartLogsPanel({ connectionId, className = "" }: QuickstartLogsPanelProps) {
@@ -128,65 +146,149 @@ export function QuickstartLogsPanel({ connectionId, className = "" }: Quickstart
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        {/* Progression State Summary */}
-        {progressionState && progressionState.cyclesCompleted > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-2 bg-muted rounded-lg text-xs mb-2">
-            <div className="text-center">
-              <div className="font-semibold">{progressionState.cyclesCompleted}</div>
-              <div className="text-muted-foreground">Cycles</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-green-600">{progressionState.successfulCycles}</div>
-              <div className="text-muted-foreground">Success</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-red-600">{progressionState.failedCycles}</div>
-              <div className="text-muted-foreground">Failed</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold">{(progressionState.cycleSuccessRate || 0).toFixed(1)}%</div>
-              <div className="text-muted-foreground">Rate</div>
-            </div>
-          </div>
-        )}
-        
-        {loading && logs.length === 0 ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Loading logs...
-          </div>
-        ) : logs.length === 0 ? (
-          <div className="text-sm text-muted-foreground py-4 text-center">No logs yet</div>
-        ) : (
-          <ScrollArea className="h-[36vh] w-full border rounded-md p-3 bg-muted/50 overflow-hidden">
-            <div className="space-y-2">
-              {logs.map((log, idx) => (
-                <div key={idx} className="text-xs font-mono">
-                  <div className="flex items-start gap-2">
-                    <Badge className={`flex-shrink-0 mt-0.5 ${getLevelColor(log.level)}`}>
-                      {log.level}
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-muted-foreground">{new Date(log.timestamp).toLocaleTimeString()}</div>
-                      <div className="text-foreground break-words">[{log.phase}] {log.message}</div>
-                      {log.details && Object.keys(log.details).length > 0 && (
-                        <div className="text-muted-foreground mt-1 break-words">
-                          {JSON.stringify(log.details, null, 2)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        )}
-
-        <div className="flex items-center gap-2 pt-2 border-t">
-          <Badge variant="outline" className="text-[10px]">Manual refresh only</Badge>
-        </div>
-      </CardContent>
+       <CardContent className="space-y-3">
+         {/* Progression State Summary */}
+         {progressionState && (
+           <>
+             {/* Main Metrics */}
+             {progressionState.cyclesCompleted > 0 && (
+               <div className="grid grid-cols-2 md:grid-cols-6 gap-2 p-3 bg-muted rounded-lg text-xs mb-4">
+                 <div className="text-center">
+                   <div className="font-semibold">{progressionState.cyclesCompleted}</div>
+                   <div className="text-muted-foreground">Total Cycles</div>
+                 </div>
+                 <div className="text-center">
+                   <div className="font-semibold text-green-600">{progressionState.successfulCycles}</div>
+                   <div className="text-muted-foreground">Successful</div>
+                 </div>
+                 <div className="text-center">
+                   <div className="font-semibold text-red-600">{progressionState.failedCycles}</div>
+                   <div className="text-muted-foreground">Failed</div>
+                 </div>
+                 <div className="text-center">
+                   <div className="font-semibold">{(progressionState.cycleSuccessRate || 0).toFixed(1)}%</div>
+                   <div className="text-muted-foreground">Success Rate</div>
+                 </div>
+                 <div className="text-center">
+                   <div className="font-semibold">{progressionState.totalTrades}</div>
+                   <div className="text-muted-foreground">Total Trades</div>
+                 </div>
+                 <div className="text-center">
+                   <div className="font-semibold text-green-600">{progressionState.successfulTrades}</div>
+                   <div className="text-muted-foreground">Winning Trades</div>
+                 </div>
+                 <div className="text-center">
+                   <div className="font-semibold">{(progressionState.tradeSuccessRate || 0).toFixed(1)}%</div>
+                   <div className="text-muted-foreground">Trade Success</div>
+                 </div>
+                 <div className="text-center">
+                   <div className="font-semibold">${(progressionState.totalProfit || 0).toFixed(2)}</div>
+                   <div className="text-muted-foreground">Total Profit</div>
+                 </div>
+                 {progressionState.cycleTimeMs !== undefined && (
+                   <div className="text-center">
+                     <div className="font-semibold">{progressionState.cycleTimeMs}ms</div>
+                     <div className="text-muted-foreground">Cycle Time</div>
+                   </div>
+                 )}
+                 {progressionState.intervalsProcessed !== undefined && (
+                   <div className="text-center">
+                     <div className="font-semibold">{progressionState.intervalsProcessed}</div>
+                     <div className="text-muted-foreground">Intervals</div>
+                   </div>
+                 )}
+                 {progressionState.indicationsCount !== undefined && (
+                   <div className="text-center">
+                     <div className="font-semibold">{progressionState.indicationsCount}</div>
+                     <div className="text-muted-foreground">Indications</div>
+                   </div>
+                 )}
+                 {progressionState.strategiesCount !== undefined && (
+                   <div className="text-center">
+                     <div className="font-semibold">{progressionState.strategiesCount}</div>
+                     <div className="text-muted-foreground">Strategies</div>
+                   </div>
+                 )}
+               </div>
+             )}
+             
+             {/* Prehistoric Data Processing Info */}
+             {progressionState.prehistoricCyclesCompleted !== undefined && progressionState.prehistoricCyclesCompleted > 0 && (
+               <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                 <div className="flex items-center justify-between mb-2">
+                   <div className="font-medium">Prehistoric Data Processing</div>
+                   <div className="text-xs text-blue-600">
+                     {progressionState.prehistoricPhaseActive ? "Active" : "Completed"}
+                   </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-2 text-sm">
+                   <div>
+                     <div className="font-semibold">{progressionState.prehistoricCyclesCompleted}</div>
+                     <div className="text-xs text-muted-foreground">Cycles</div>
+                   </div>
+                   <div>
+                     <div className="font-semibold">{progressionState.prehistoricSymbolsProcessedCount || 0}</div>
+                     <div className="text-xs text-muted-foreground">Symbols</div>
+                   </div>
+                   <div>
+                     <div className="font-semibold">{progressionState.prehistoricCandlesProcessed || 0}</div>
+                     <div className="text-xs text-muted-foreground">Candles</div>
+                   </div>
+                   <div>
+                     <div className="font-semibold">{progressionState.strategyEvaluatedBase || 0}</div>
+                     <div className="text-xs text-muted-foreground">Base Eval</div>
+                   </div>
+                   <div>
+                     <div className="font-semibold">{progressionState.strategyEvaluatedMain || 0}</div>
+                     <div className="text-xs text-muted-foreground">Main Eval</div>
+                   </div>
+                   <div>
+                     <div className="font-semibold">{progressionState.strategyEvaluatedReal || 0}</div>
+                     <div className="text-xs text-muted-foreground">Real Eval</div>
+                   </div>
+                 </div>
+               </div>
+             )}
+             
+             {/* Detailed Logs Section */}
+             {loading && logs.length === 0 ? (
+               <div className="flex items-center justify-center py-8 text-muted-foreground">
+                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                 Loading logs...
+               </div>
+             ) : logs.length === 0 ? (
+               <div className="text-sm text-muted-foreground py-4 text-center">No logs yet</div>
+             ) : (
+               <ScrollArea className="h-[36vh] w-full border rounded-md p-3 bg-muted/50 overflow-hidden">
+                 <div className="space-y-2">
+                   {logs.map((log, idx) => (
+                     <div key={idx} className="text-xs font-mono">
+                       <div className="flex items-start gap-2">
+                         <Badge className={`flex-shrink-0 mt-0.5 ${getLevelColor(log.level)}`}>
+                           {log.level}
+                         </Badge>
+                         <div className="flex-1 min-w-0">
+                           <div className="text-muted-foreground">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                           <div className="text-foreground break-words">[{log.phase}] {log.message}</div>
+                           {log.details && Object.keys(log.details).length > 0 && (
+                             <div className="text-muted-foreground mt-1 break-words max-h-[100px] overflow-y-auto">
+                               {JSON.stringify(log.details, null, 2)}
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </ScrollArea>
+             )}
+             
+             <div className="flex items-center gap-2 pt-2 border-t">
+               <Badge variant="outline" className="text-[10px]">Manual refresh only</Badge>
+             </div>
+           </>
+         )}
+       </CardContent>
     </Card>
   )
 }

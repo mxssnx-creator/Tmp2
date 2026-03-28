@@ -22,6 +22,31 @@ export interface ProgressionState {
   prehistoricPhaseActive?: boolean
   engine_cycles_total?: number
   lastCycleTime?: Date | null
+  
+  // Prehistoric data processing metrics
+  prehistoricCandlesProcessed?: number
+  prehistoricSymbolsProcessedCount?: number
+  
+  // Indications by type (direction, move, active, optimal, auto)
+  indicationsDirectionCount?: number
+  indicationsMoveCount?: number
+  indicationsActiveCount?: number
+  indicationsOptimalCount?: number
+  indicationsAutoCount?: number
+  
+  // Strategy count sets and evaluated counts
+  strategiesBaseTotal?: number
+  strategiesMainTotal?: number
+  strategiesRealTotal?: number
+  strategyEvaluatedBase?: number
+  strategyEvaluatedMain?: number
+  strategyEvaluatedReal?: number
+  
+  // Engine performance metrics
+  cycleTimeMs?: number
+  intervalsProcessed?: number
+  indicationsCount?: number
+  strategiesCount?: number
 }
 
 export class ProgressionStateManager {
@@ -34,42 +59,76 @@ export class ProgressionStateManager {
       const key = `progression:${connectionId}`
       const data = await client.hgetall(key)
 
-      if (!data || Object.keys(data).length === 0) {
-        // Return default progression state
-        return {
-          connectionId,
-          cyclesCompleted: 0,
-          successfulCycles: 0,
-          failedCycles: 0,
-          totalTrades: 0,
-          successfulTrades: 0,
-          totalProfit: 0,
-          cycleSuccessRate: 0,
-          tradeSuccessRate: 0,
-        lastCycleTime: undefined,
-          lastUpdate: new Date(),
-          prehistoricCyclesCompleted: 0,
-          prehistoricSymbolsProcessed: [],
-          prehistoricPhaseActive: false,
-        }
-      }
+       if (!data || Object.keys(data).length === 0) {
+         // Return default progression state
+         return {
+           connectionId,
+           cyclesCompleted: 0,
+           successfulCycles: 0,
+           failedCycles: 0,
+           totalTrades: 0,
+           successfulTrades: 0,
+           totalProfit: 0,
+           cycleSuccessRate: 0,
+           tradeSuccessRate: 0,
+         lastCycleTime: undefined,
+         lastUpdate: new Date(),
+         prehistoricCyclesCompleted: 0,
+         prehistoricSymbolsProcessed: [],
+         prehistoricPhaseActive: false,
+         prehistoricCandlesProcessed: 0,
+         prehistoricSymbolsProcessedCount: 0,
+         indicationsDirectionCount: 0,
+         indicationsMoveCount: 0,
+         indicationsActiveCount: 0,
+         indicationsOptimalCount: 0,
+         indicationsAutoCount: 0,
+         strategiesBaseTotal: 0,
+         strategiesMainTotal: 0,
+         strategiesRealTotal: 0,
+         strategyEvaluatedBase: 0,
+         strategyEvaluatedMain: 0,
+         strategyEvaluatedReal: 0,
+         cycleTimeMs: 0,
+         intervalsProcessed: 0,
+         indicationsCount: 0,
+         strategiesCount: 0,
+         }
+       }
 
-      return {
-        connectionId,
-        cyclesCompleted: parseInt(data.cycles_completed || "0", 10),
-        successfulCycles: parseInt(data.successful_cycles || "0", 10),
-        failedCycles: parseInt(data.failed_cycles || "0", 10),
-        totalTrades: parseInt(data.total_trades || "0", 10),
-        successfulTrades: parseInt(data.successful_trades || "0", 10),
-        totalProfit: parseFloat(data.total_profit || "0"),
-        cycleSuccessRate: parseFloat(data.cycle_success_rate || "0"),
-        tradeSuccessRate: parseFloat(data.trade_success_rate || "0"),
-        lastCycleTime: data.last_cycle_time ? new Date(data.last_cycle_time) : undefined,
-        lastUpdate: new Date(data.last_update || new Date()),
-        prehistoricCyclesCompleted: parseInt(data.prehistoric_cycles_completed || "0", 10),
-        prehistoricSymbolsProcessed: data.prehistoric_symbols_processed ? JSON.parse(data.prehistoric_symbols_processed) : [],
-        prehistoricPhaseActive: data.prehistoric_phase_active === "true",
-      }
+       return {
+         connectionId,
+         cyclesCompleted: parseInt(data.cycles_completed || "0", 10),
+         successfulCycles: parseInt(data.successful_cycles || "0", 10),
+         failedCycles: parseInt(data.failed_cycles || "0", 10),
+         totalTrades: parseInt(data.total_trades || "0", 10),
+         successfulTrades: parseInt(data.successful_trades || "0", 10),
+         totalProfit: parseFloat(data.total_profit || "0"),
+         cycleSuccessRate: parseFloat(data.cycle_success_rate || "0"),
+         tradeSuccessRate: parseFloat(data.trade_success_rate || "0"),
+         lastCycleTime: data.last_cycle_time ? new Date(data.last_cycle_time) : undefined,
+         lastUpdate: new Date(data.last_update || new Date()),
+         prehistoricCyclesCompleted: parseInt(data.prehistoric_cycles_completed || "0", 10),
+         prehistoricSymbolsProcessed: data.prehistoric_symbols_processed ? JSON.parse(data.prehistoric_symbols_processed) : [],
+         prehistoricPhaseActive: data.prehistoric_phase_active === "true",
+         prehistoricCandlesProcessed: parseInt(data.prehistoric_candles_processed || "0", 10),
+         prehistoricSymbolsProcessedCount: parseInt(data.prehistoric_symbols_processed_count || "0", 10),
+         indicationsDirectionCount: parseInt(data.indications_direction_count || "0", 10),
+         indicationsMoveCount: parseInt(data.indications_move_count || "0", 10),
+         indicationsActiveCount: parseInt(data.indications_active_count || "0", 10),
+         indicationsOptimalCount: parseInt(data.indications_optimal_count || "0", 10),
+         indicationsAutoCount: parseInt(data.indications_auto_count || "0", 10),
+         strategiesBaseTotal: parseInt(data.strategies_base_total || "0", 10),
+         strategiesMainTotal: parseInt(data.strategies_main_total || "0", 10),
+         strategiesRealTotal: parseInt(data.strategies_real_total || "0", 10),
+         strategyEvaluatedBase: parseInt(data.strategies_base_evaluated || "0", 10),
+         strategyEvaluatedMain: parseInt(data.strategies_main_evaluated || "0", 10),
+         strategyEvaluatedReal: parseInt(data.strategies_real_evaluated || "0", 10),
+         cycleTimeMs: parseInt(data.cycle_time_ms || "0", 10),
+         intervalsProcessed: parseInt(data.intervals_processed || "0", 10),
+         indicationsCount: parseInt(data.indications_count || "0", 10),
+         strategiesCount: parseInt(data.strategies_count || "0", 10),
+       }
     } catch (error) {
       console.error(`[v0] Failed to get progression state for ${connectionId}:`, error)
       // Return default on error

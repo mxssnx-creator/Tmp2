@@ -13,6 +13,7 @@ import { logProgressionEvent } from "@/lib/engine-progression-logs"
 import { loadMarketDataForEngine } from "@/lib/market-data-loader"
 import { ProgressionStateManager } from "@/lib/progression-state-manager"
 import { engineMonitor } from "@/lib/engine-performance-monitor"
+import { ConfigSetProcessor } from "./config-set-processor"
 
 export interface EngineConfig {
   connectionId: string
@@ -397,7 +398,6 @@ export class TradeEngineManager {
     console.log("[v0] [Prehistoric] Starting background prehistoric data loading...")
 
     try {
-      // Check if prehistoric data already loaded
       const engineState = await getSettings(`trade_engine_state:${this.connectionId}`)
       if (engineState?.prehistoric_data_loaded) {
         console.log("[v0] [Prehistoric] Data already loaded, skipping...")
@@ -407,16 +407,30 @@ export class TradeEngineManager {
       const symbols = await this.getSymbols()
       console.log(`[v0] [Prehistoric] Loading data for ${symbols.length} symbol(s)`)
 
-      // Fast path: just mark as loaded - actual historical calculations happen as needed
       const prehistoricEnd = new Date()
       const prehistoricStart = new Date(prehistoricEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-      // Update state to mark prehistoric phase started
+      // PHASE 5-6: Initialize config sets and process prehistoric data through them
+      console.log("[v0] [Prehistoric] Phase 5-6: Initializing config sets...")
+      const configProcessor = new ConfigSetProcessor(this.connectionId)
+      
+      const configInitResult = await configProcessor.initializeConfigSets()
+      console.log(`[v0] [Prehistoric] Config sets initialized: ${configInitResult.indications} indications, ${configInitResult.strategies} strategies`)
+      
+      // PHASE 6: Process prehistoric data through config sets to fill results
+      console.log("[v0] [Prehistoric] Phase 6: Processing prehistoric data through config sets...")
+      const processingResult = await configProcessor.processPrehistoricData(symbols)
+      console.log(`[v0] [Prehistoric] Config set processing complete: ${processingResult.indicationResults} indication results, ${processingResult.strategyPositions} positions in ${processingResult.duration}ms`)
+
+      // Update state to mark prehistoric phase complete
       await setSettings(`trade_engine_state:${this.connectionId}`, {
         prehistoric_data_loaded: true,
         prehistoric_data_start: prehistoricStart.toISOString(),
         prehistoric_data_end: prehistoricEnd.toISOString(),
         prehistoric_symbols: symbols,
+        config_sets_initialized: true,
+        config_set_indication_results: processingResult.indicationResults,
+        config_set_strategy_positions: processingResult.strategyPositions,
         updated_at: new Date().toISOString(),
       })
 
@@ -425,9 +439,9 @@ export class TradeEngineManager {
         const client = getRedisClient()
         for (const symbol of symbols) {
           await client.sadd(`prehistoric:${this.connectionId}:symbols`, symbol)
-          await client.expire(`prehistoric:${this.connectionId}:symbols`, 86400) // 24h TTL
+          await client.expire(`prehistoric:${this.connectionId}:symbols`, 86400)
           await client.set(`prehistoric:${this.connectionId}:${symbol}:loaded`, "true")
-          await client.expire(`prehistoric:${this.connectionId}:${symbol}:loaded`, 86400) // 24h TTL
+          await client.expire(`prehistoric:${this.connectionId}:${symbol}:loaded`, 86400)
         }
         console.log(`[v0] [Prehistoric] Stored ${symbols.length} symbols in Redis for dashboard`)
       } catch (e) {
@@ -436,10 +450,8 @@ export class TradeEngineManager {
 
       console.log("[v0] [Prehistoric] Background loading complete - engine can now process real-time data")
     } catch (error) {
-      // Non-blocking - log but DON'T throw - allow engine to continue
       console.warn("[v0] [Prehistoric] Background loading failed (continuing anyway):", error instanceof Error ? error.message : String(error))
       
-      // Mark as failed but continue - this won't block other phases
       try {
         await setSettings(`trade_engine_state:${this.connectionId}`, {
           prehistoric_data_loaded: false,

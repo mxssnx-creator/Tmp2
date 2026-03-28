@@ -49,9 +49,14 @@ Phases 1-6 of the comprehensive system remediation are complete, including Phase
 - IndicationConfigManager: Independent config sets with steps, ratios, result tracking (250 max)
 - StrategyConfigManager: Independent config sets with position sizing, take-profit/stop-loss, pseudo positions (250 max)
 
-**Phase 6 (1 fix)**: Processing Logic - Non-blocking Prehistoric Data ✅
+**Phase 6 (2 fixes)**: Processing Logic - Config Set Integration ✅
 - Engine manager loads prehistoric data in background (fire-and-forget)
 - Engine startup proceeds immediately without waiting for data load
+- **NEW**: ConfigSetProcessor integrated into `loadPrehistoricData()` in engine-manager.ts
+  - Calls `initializeConfigSets()` to create default indication/strategy configs
+  - Calls `processPrehistoricData()` to fill config sets with calculated results
+  - Each symbol's candle data processed through all config combinations
+  - Stores indication results and pseudo positions in respective config sets (250 max each)
 
 **Remaining**: Phase B (Important - 48h) = 1-2 minor items for 100% completion
 

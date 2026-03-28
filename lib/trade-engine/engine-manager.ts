@@ -406,6 +406,10 @@ export class TradeEngineManager {
 
       const symbols = await this.getSymbols()
       console.log(`[v0] [Prehistoric] Loading data for ${symbols.length} symbol(s)`)
+      await logProgressionEvent(this.connectionId, "prehistoric_data_scan", "info", "Scanning symbols for prehistoric processing", {
+        symbols,
+        symbolsCount: symbols.length,
+      })
 
       const prehistoricEnd = new Date()
       const prehistoricStart = new Date(prehistoricEnd.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -416,11 +420,25 @@ export class TradeEngineManager {
       
       const configInitResult = await configProcessor.initializeConfigSets()
       console.log(`[v0] [Prehistoric] Config sets initialized: ${configInitResult.indications} indications, ${configInitResult.strategies} strategies`)
+      await logProgressionEvent(this.connectionId, "prehistoric_config_init", "info", "Config sets initialized for prehistoric processing", {
+        indicationConfigs: configInitResult.indications,
+        strategyConfigs: configInitResult.strategies,
+      })
       
       // PHASE 6: Process prehistoric data through config sets to fill results
       console.log("[v0] [Prehistoric] Phase 6: Processing prehistoric data through config sets...")
       const processingResult = await configProcessor.processPrehistoricData(symbols)
       console.log(`[v0] [Prehistoric] Config set processing complete: ${processingResult.indicationResults} indication results, ${processingResult.strategyPositions} positions in ${processingResult.duration}ms`)
+      await logProgressionEvent(this.connectionId, "prehistoric_processed", processingResult.errors > 0 ? "warning" : "info", "Prehistoric data processing completed", {
+        symbolsTotal: processingResult.symbolsTotal,
+        symbolsProcessed: processingResult.symbolsProcessed,
+        symbolsWithoutData: processingResult.symbolsWithoutData,
+        candlesProcessed: processingResult.candlesProcessed,
+        indicationResults: processingResult.indicationResults,
+        strategyPositions: processingResult.strategyPositions,
+        errors: processingResult.errors,
+        durationMs: processingResult.duration,
+      })
 
       // Update state to mark prehistoric phase complete
       await setSettings(`trade_engine_state:${this.connectionId}`, {
@@ -431,6 +449,13 @@ export class TradeEngineManager {
         config_sets_initialized: true,
         config_set_indication_results: processingResult.indicationResults,
         config_set_strategy_positions: processingResult.strategyPositions,
+        config_set_symbols_total: processingResult.symbolsTotal,
+        config_set_symbols_processed: processingResult.symbolsProcessed,
+        config_set_symbols_without_data: processingResult.symbolsWithoutData,
+        config_set_candles_processed: processingResult.candlesProcessed,
+        config_set_errors: processingResult.errors,
+        config_set_duration_ms: processingResult.duration,
+        prehistoric_last_processed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
 
@@ -451,6 +476,10 @@ export class TradeEngineManager {
       console.log("[v0] [Prehistoric] Background loading complete - engine can now process real-time data")
     } catch (error) {
       console.warn("[v0] [Prehistoric] Background loading failed (continuing anyway):", error instanceof Error ? error.message : String(error))
+
+      await logProgressionEvent(this.connectionId, "prehistoric_error", "error", "Prehistoric data processing failed", {
+        error: error instanceof Error ? error.message : String(error),
+      })
       
       try {
         await setSettings(`trade_engine_state:${this.connectionId}`, {

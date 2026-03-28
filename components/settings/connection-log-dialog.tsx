@@ -80,10 +80,13 @@ export function ConnectionLogDialog({ open, onOpenChange, connectionId, connecti
               <DialogTitle>Connection Logs - {connectionName}</DialogTitle>
               <DialogDescription>View recent activity and error logs for this connection</DialogDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={loadLogs} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[10px]">Manual refresh only</Badge>
+              <Button variant="outline" size="sm" onClick={loadLogs} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -118,20 +121,20 @@ export function ConnectionLogDialog({ open, onOpenChange, connectionId, connecti
             <Separator />
 
             {/* Logs */}
-            <ScrollArea className="h-[400px] border rounded-lg p-4">
+            <ScrollArea className="h-[420px] border rounded-lg p-4 bg-slate-50/60">
               {logs.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No logs available</p>
               ) : (
                 <div className="space-y-2">
                   {logs.map((log, index) => (
-                    <div key={index} className="p-3 border rounded-lg space-y-1">
+                    <div key={index} className="p-3 border rounded-lg space-y-1 bg-white/90">
                       <div className="flex items-center gap-2 justify-between">
                         {getLevelBadge(log.level)}
                         <span className="text-xs text-muted-foreground">
                           {new Date(log.timestamp).toLocaleString()}
                         </span>
                       </div>
-                      <p className="text-sm font-medium">{log.message}</p>
+                      <p className="text-sm font-medium leading-relaxed">{log.message}</p>
                       <div className="text-xs text-muted-foreground">Phase: {log.phase || "unknown"} • Source: {log.source || "runtime"}</div>
                       {log.details && (
                         <pre className="text-xs text-muted-foreground bg-muted p-2 rounded overflow-x-auto">

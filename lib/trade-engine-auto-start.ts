@@ -6,7 +6,7 @@
 import { getGlobalTradeEngineCoordinator } from "./trade-engine"
 import { getAllConnections, getRedisClient, initRedis } from "./redis-db"
 import { loadSettingsAsync } from "./settings-storage"
-import { hasConnectionCredentials, isConnectionInActivePanel, isConnectionSystemEnabled } from "./connection-state-utils"
+import { hasConnectionCredentials, isConnectionMainProcessing } from "./connection-state-utils"
 
 let autoStartInitialized = false
 let autoStartTimer: NodeJS.Timeout | null = null
@@ -57,17 +57,15 @@ export async function initializeTradeEngineAutoStart(): Promise<void> {
       return
     }
 
-    // Filter for connections that are in Main panel AND system-enabled with valid credentials
-    // Engines use is_enabled (internal system state), not is_enabled_dashboard (user UI toggle)
-    // This allows engines to start automatically for base connections
+    // Filter only user-enabled main-processing connections.
+    // This prevents disabled main connections from being auto-restarted.
     const enabledConnections = connections.filter((c) => {
-      const isActiveInserted = isConnectionInActivePanel(c)
-      const isSystemEnabled = isConnectionSystemEnabled(c)
+      const isMainProcessing = isConnectionMainProcessing(c)
       const hasValidCredentials = hasConnectionCredentials(c, 20, false)
-      return isActiveInserted && isSystemEnabled && hasValidCredentials
+      return isMainProcessing && hasValidCredentials
     })
 
-    console.log(`[v0] [Auto-Start] Found ${enabledConnections.length} eligible connections (main-inserted + system-enabled + valid keys) out of ${connections.length} total`)
+    console.log(`[v0] [Auto-Start] Found ${enabledConnections.length} eligible connections (main-assigned + dashboard-enabled + valid keys) out of ${connections.length} total`)
 
     if (enabledConnections.length === 0) {
       console.log("[v0] [Auto-Start] No enabled connections - monitoring for changes...")
@@ -147,13 +145,11 @@ function startConnectionMonitoring(): void {
         return
       }
 
-      // Filter for Main-inserted + system-enabled connections with valid API keys only
-      // Uses is_enabled (internal system state), NOT is_enabled_dashboard (user UI toggle)
+      // Filter for main-assigned + dashboard-enabled connections with valid API keys only.
       const enabledConnections = connections.filter((c) => {
-        const isActiveInserted = isConnectionInActivePanel(c)
-        const isSystemEnabled = isConnectionSystemEnabled(c)
+        const isMainProcessing = isConnectionMainProcessing(c)
         const hasValidCredentials = hasConnectionCredentials(c, 20, false)
-        return isActiveInserted && isSystemEnabled && hasValidCredentials
+        return isMainProcessing && hasValidCredentials
       })
 
       const enabledSignature = enabledConnections

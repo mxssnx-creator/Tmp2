@@ -62,6 +62,13 @@ Phases 1-6 of the comprehensive system remediation are complete, including Phase
 
 ## Recently Completed
 
+### Session 8: Logging/Progression Coverage + Auto-Restart Fix (COMPLETED)
+- [x] Disabled automatic polling in quickstart/progression/detailed/main connection log dialogs and switched to explicit manual refresh controls for deterministic log snapshots.
+- [x] Expanded detailed logs backend summary (`/api/trade-engine/detailed-logs`) with comprehensive aggregated telemetry: prehistoric processing (symbols, candles, errors, duration), indication type counts (direction/move/active/optimal/auto), independent strategy counts (base/main/real), realtime cycle coverage, and cycle-time metrics in ms.
+- [x] Added stronger prehistoric processing instrumentation in `engine-manager` and `config-set-processor`: symbol scan logs, config init logs, per-symbol skip/error tracking, full processing summaries, and persisted processing totals in `trade_engine_state:*` for UI/API consumption.
+- [x] Fixed unintended automatic engine restarts by hardening auto-start eligibility to require true main-processing state (assigned + dashboard-enabled + credentials), preventing disabled main connections from being restarted by background monitor loops.
+- [x] Updated main connection log dialog styling/text flow and scroll container behavior for compact modern readability under high-volume log payloads.
+
 ### Session 7: Phase 5-6 Implementation (COMPLETED)
 - [x] **Phase 5.1**: Created `lib/indication-config-manager.ts` (222 lines)
   - IndicationConfigManager class with CRUD operations for config sets
@@ -511,6 +518,7 @@ Current focus is runtime correctness and operational workflow completeness for t
 
 | Date | Changes |
 |------|---------|
+| 2026-03-28 | Fixed processing/logging coverage gaps: manual-refresh log dialogs, comprehensive detailed-log telemetry expansion (prehistoric + indication/strategy/realtime counts), stronger prehistoric error tracking, and auto-start eligibility correction to stop unintended global/main engine restarts. |
 | 2026-03-28 | **PHASE 5-6 COMPLETE**: Created indication-config-manager.ts (222 lines) and strategy-config-manager.ts (331 lines) for independent config sets; added non-blocking prehistoric data loading in engine-manager; production readiness 95+/100 ✅ |
 | 2026-03-23 | **PHASE C COMPLETE**: Fixed pre-rendering (32 pages with `export const dynamic`), resolved 45 TypeScript errors (enums, types, return types), created deployment guide; production readiness 90+/100 ✅ |
 | 2026-03-23 | **PHASE B COMPLETE**: Implemented 8 operational systems (database metrics, performance dashboard, backup system, load testing, security hardening, disaster recovery procedures, operations guide, team training) with 56/58 tests passing |

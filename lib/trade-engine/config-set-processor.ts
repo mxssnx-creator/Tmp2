@@ -16,6 +16,11 @@ export interface ProcessingResult {
   indicationResults: number
   strategyConfigs: number
   strategyPositions: number
+  symbolsTotal: number
+  symbolsProcessed: number
+  symbolsWithoutData: number
+  candlesProcessed: number
+  errors: number
   duration: number
 }
 
@@ -80,6 +85,10 @@ export class ConfigSetProcessor {
 
     let totalIndicationResults = 0
     let totalStrategyPositions = 0
+    let symbolsProcessed = 0
+    let symbolsWithoutData = 0
+    let candlesProcessed = 0
+    let errors = 0
 
     const indicationConfigs = await this.indicationManager.getEnabledConfigs()
     const strategyConfigs = await this.strategyManager.getEnabledConfigs()
@@ -106,10 +115,17 @@ export class ConfigSetProcessor {
 
         if (candles.length === 0) {
           console.log(`[v0] [ConfigSetProcessor] No candles found for ${symbol}, skipping`)
+          symbolsWithoutData++
+          await logProgressionEvent(this.connectionId, "config_set_symbol_skipped", "warning", `No prehistoric candles for ${symbol}`, {
+            symbol,
+            stage: "prehistoric",
+          })
           continue
         }
 
         console.log(`[v0] [ConfigSetProcessor] Processing ${candles.length} candles for ${symbol}`)
+        candlesProcessed += candles.length
+        symbolsProcessed++
 
         const indicationResults = await this.processIndicationConfigs(symbol, candles, indicationConfigs)
         totalIndicationResults += indicationResults
@@ -119,6 +135,11 @@ export class ConfigSetProcessor {
 
       } catch (error) {
         console.error(`[v0] [ConfigSetProcessor] Error processing ${symbol}:`, error)
+        errors++
+        await logProgressionEvent(this.connectionId, "config_set_symbol_error", "error", `Prehistoric processing failed for ${symbol}`, {
+          symbol,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     }
 
@@ -128,6 +149,11 @@ export class ConfigSetProcessor {
       indicationResults: totalIndicationResults,
       strategyConfigs: strategyConfigs.length,
       strategyPositions: totalStrategyPositions,
+      symbolsTotal: symbols.length,
+      symbolsProcessed,
+      symbolsWithoutData,
+      candlesProcessed,
+      errors,
       duration,
     }
 
@@ -138,6 +164,19 @@ export class ConfigSetProcessor {
 
     await logProgressionEvent(this.connectionId, "config_set_processing", "info", 
       `Processed prehistoric data through config sets`, result)
+
+    await logProgressionEvent(this.connectionId, "config_set_processing_summary", errors > 0 ? "warning" : "info", "Prehistoric config processing summary", {
+      symbolsTotal: result.symbolsTotal,
+      symbolsProcessed: result.symbolsProcessed,
+      symbolsWithoutData: result.symbolsWithoutData,
+      candlesProcessed: result.candlesProcessed,
+      indicationConfigs: result.indicationConfigs,
+      strategyConfigs: result.strategyConfigs,
+      indicationResults: result.indicationResults,
+      strategyPositions: result.strategyPositions,
+      errors: result.errors,
+      durationMs: result.duration,
+    })
 
     return result
   }

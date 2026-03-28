@@ -45,9 +45,6 @@ export function ProgressionLogsDialog({
   useEffect(() => {
     if (open) {
       loadLogs()
-      // Auto-refresh logs while dialog is open
-      const refreshInterval = setInterval(loadLogs, 3000)
-      return () => clearInterval(refreshInterval)
     }
   }, [open, connectionId])
 
@@ -145,6 +142,7 @@ export function ProgressionLogsDialog({
             {logs.length} log entries {isLoading && "(refreshing...)"}
           </div>
           <div className="flex gap-2">
+            <Badge variant="outline" className="text-[10px]">Manual refresh only</Badge>
             <Button
               variant="outline"
               size="sm"
@@ -166,7 +164,7 @@ export function ProgressionLogsDialog({
           </div>
         </div>
 
-        <ScrollArea className="w-full h-[48vh] border rounded-md bg-slate-50 p-3 font-mono text-xs overflow-hidden">
+        <ScrollArea className="w-full h-[50vh] border rounded-md bg-slate-50 p-3 font-mono text-xs">
           {isLoading ? (
             <div className="text-muted-foreground">Loading logs...</div>
           ) : logs.length === 0 ? (
@@ -184,7 +182,7 @@ export function ProgressionLogsDialog({
                     <Badge variant="outline" className="min-w-fit">
                       {log.phase}
                     </Badge>
-                    <span className="flex-1 min-w-0 break-words text-gray-700">{log.message}</span>
+                    <span className="flex-1 min-w-0 break-words text-gray-700 leading-relaxed">{log.message}</span>
                     {log.details && (
                       <span className="text-gray-500 max-w-xs break-words whitespace-pre-wrap">
                         {JSON.stringify(log.details, null, 2)}

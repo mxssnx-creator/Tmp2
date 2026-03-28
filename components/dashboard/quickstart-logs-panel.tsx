@@ -34,7 +34,6 @@ export function QuickstartLogsPanel({ connectionId, className = "" }: Quickstart
   const [logs, setLogs] = useState<ProgressionLogEntry[]>([])
   const [progressionState, setProgressionState] = useState<ProgressionState | null>(null)
   const [loading, setLoading] = useState(false)
-  const [autoRefresh, setAutoRefresh] = useState(true)
 
   const fetchLogs = async () => {
     if (!connectionId) return
@@ -59,14 +58,7 @@ export function QuickstartLogsPanel({ connectionId, className = "" }: Quickstart
 
   useEffect(() => {
     fetchLogs()
-
-    // Auto-refresh if enabled
-    if (autoRefresh && connectionId) {
-      // Optimized: Increased polling from 2s to 5s for logs (reduces API pressure)
-      const interval = setInterval(fetchLogs, 5000)
-      return () => clearInterval(interval)
-    }
-  }, [connectionId, autoRefresh])
+  }, [connectionId])
 
   const copyLogs = () => {
     const logText = logs
@@ -192,15 +184,7 @@ export function QuickstartLogsPanel({ connectionId, className = "" }: Quickstart
         )}
 
         <div className="flex items-center gap-2 pt-2 border-t">
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded"
-            />
-            Manual refresh only
-          </label>
+          <Badge variant="outline" className="text-[10px]">Manual refresh only</Badge>
         </div>
       </CardContent>
     </Card>

@@ -69,6 +69,16 @@ interface ProgressSummary {
     auto: number
     total: number
   }
+  strategyCountsByType?: {
+    base: number
+    main: number
+    real: number
+  }
+  strategyEvaluatedByType?: {
+    base: number
+    main: number
+    real: number
+  }
   pseudoPositionsByType: {
     baseByIndication: {
       direction: number
@@ -79,6 +89,18 @@ interface ProgressSummary {
   }
   livePositions: number
   cycleDurationMs: number
+  realtimeCycles?: number
+  realtimeRunningConnections?: number
+  prehistoricProcessing?: {
+    symbolsProcessed: number
+    symbolsTotal: number
+    symbolsWithoutData: number
+    candlesProcessed: number
+    indicationResults: number
+    strategyPositions: number
+    errors: number
+    durationMs: number
+  }
   configsProcessed: number
   evalsCompleted: number
   avgCycleDuration: number
@@ -98,6 +120,7 @@ export function DetailedLoggingDialog() {
   const [activeTab, setActiveTab] = useState<"logs" | "data">("logs")
 
   const fetchLogs = useCallback(async () => {
+    setLoading(true)
     try {
       const params = new URLSearchParams()
       if (selectedConnectionId) params.set("connectionId", selectedConnectionId)
@@ -111,14 +134,14 @@ export function DetailedLoggingDialog() {
       }
     } catch (error) {
       console.error("[v0] Error fetching detailed logs:", error)
+    } finally {
+      setLoading(false)
     }
   }, [selectedConnectionId, selectedExchange])
 
   useEffect(() => {
     if (open) {
       fetchLogs()
-      const interval = setInterval(fetchLogs, 5000)
-      return () => clearInterval(interval)
     }
   }, [open, fetchLogs])
 
@@ -164,13 +187,16 @@ export function DetailedLoggingDialog() {
           Detailed Logs
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Detailed Engine Processing Logs</span>
-            <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={loading}>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[10px]">Manual refresh only</Badge>
+              <Button variant="ghost" size="sm" onClick={fetchLogs} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -214,7 +240,7 @@ export function DetailedLoggingDialog() {
         )}
 
         {/* Main Content - Logs or Data */}
-        <ScrollArea className="flex-1 min-h-[300px] border rounded-md p-2">
+        <ScrollArea className="flex-1 min-h-0 border rounded-md bg-slate-50/70 p-2">
           {activeTab === "data" ? (
             <div className="space-y-4 p-2">
               {summary ? (
@@ -246,6 +272,33 @@ export function DetailedLoggingDialog() {
                     <div className="bg-blue-50 rounded p-2 text-center">
                       <div className="text-blue-700 font-bold text-lg">{summary.intervalsProcessed}</div>
                       <div className="text-muted-foreground text-[10px]">Total Intervals</div>
+                    </div>
+                  </div>
+
+                  {/* Strategy Sets and Evaluations */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+                      <GitBranch className="h-4 w-4" />
+                      Strategy Coverage (Independent)
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      <div className="bg-emerald-50 rounded p-2 text-center">
+                        <div className="text-emerald-700 font-bold">{summary.strategyCountsByType?.base || 0}</div>
+                        <div className="text-muted-foreground text-[8px]">Base Sets</div>
+                      </div>
+                      <div className="bg-emerald-50 rounded p-2 text-center">
+                        <div className="text-emerald-700 font-bold">{summary.strategyCountsByType?.main || 0}</div>
+                        <div className="text-muted-foreground text-[8px]">Main Sets</div>
+                      </div>
+                      <div className="bg-emerald-50 rounded p-2 text-center">
+                        <div className="text-emerald-700 font-bold">{summary.strategyCountsByType?.real || 0}</div>
+                        <div className="text-muted-foreground text-[8px]">Real Sets</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      <div className="bg-emerald-100 rounded p-1 text-center text-[10px]">Eval Base: {summary.strategyEvaluatedByType?.base || 0}</div>
+                      <div className="bg-emerald-100 rounded p-1 text-center text-[10px]">Eval Main: {summary.strategyEvaluatedByType?.main || 0}</div>
+                      <div className="bg-emerald-100 rounded p-1 text-center text-[10px]">Eval Real: {summary.strategyEvaluatedByType?.real || 0}</div>
                     </div>
                   </div>
 
@@ -354,6 +407,37 @@ export function DetailedLoggingDialog() {
                       </div>
                     </div>
                   </div>
+
+                  {summary.prehistoricProcessing && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-rose-700">
+                        <BarChart3 className="h-4 w-4" />
+                        Prehistoric Processing Details
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
+                        <div className="bg-rose-50 rounded p-2 text-center">
+                          <div className="text-rose-700 font-bold text-sm">{summary.prehistoricProcessing.symbolsProcessed}/{summary.prehistoricProcessing.symbolsTotal}</div>
+                          <div className="text-muted-foreground text-[8px]">Symbols</div>
+                        </div>
+                        <div className="bg-rose-50 rounded p-2 text-center">
+                          <div className="text-rose-700 font-bold text-sm">{summary.prehistoricProcessing.candlesProcessed}</div>
+                          <div className="text-muted-foreground text-[8px]">Candles</div>
+                        </div>
+                        <div className="bg-rose-50 rounded p-2 text-center">
+                          <div className="text-rose-700 font-bold text-sm">{summary.prehistoricProcessing.indicationResults}</div>
+                          <div className="text-muted-foreground text-[8px]">Indication Results</div>
+                        </div>
+                        <div className="bg-rose-50 rounded p-2 text-center">
+                          <div className="text-rose-700 font-bold text-sm">{summary.prehistoricProcessing.strategyPositions}</div>
+                          <div className="text-muted-foreground text-[8px]">Strategy Positions</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-[10px]">
+                        <div className="rounded bg-rose-100 px-2 py-1">No data symbols: {summary.prehistoricProcessing.symbolsWithoutData}</div>
+                        <div className="rounded bg-rose-100 px-2 py-1">Process duration: {summary.prehistoricProcessing.durationMs}ms</div>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center text-muted-foreground py-8">
@@ -374,7 +458,7 @@ export function DetailedLoggingDialog() {
                   onOpenChange={() => toggleExpand(log.id)}
                 >
                   <CollapsibleTrigger asChild>
-                    <div className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer text-xs">
+                    <div className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer text-xs border border-transparent hover:border-slate-200">
                       {expandedIds.has(log.id) ? (
                         <ChevronDown className="h-3 w-3 shrink-0" />
                       ) : (
@@ -389,14 +473,14 @@ export function DetailedLoggingDialog() {
                           {log.symbol}
                         </Badge>
                       )}
-                      <span className="text-muted-foreground truncate flex-1">{log.message}</span>
+                      <span className="text-muted-foreground truncate flex-1 leading-relaxed">{log.message}</span>
                       <span className="text-muted-foreground text-[10px] shrink-0">
                         {new Date(log.timestamp).toLocaleTimeString()}
                       </span>
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="ml-6 p-2 bg-muted/50 rounded text-xs space-y-1">
+                    <div className="ml-6 p-2 bg-slate-100 rounded text-xs space-y-1">
                       {log.details && (
                         <>
                           {log.details.timeframe && (
@@ -481,7 +565,7 @@ export function DetailedLoggingDialog() {
                 Updated: {new Date(summary.lastUpdate).toLocaleTimeString()}
               </Badge>
             </div>
-            <div className="grid grid-cols-6 gap-2 text-xs">
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
               <div className="bg-blue-50 rounded p-2 text-center">
                 <div className="text-blue-600 font-bold text-lg">{summary.symbolsActive}</div>
                 <div className="text-muted-foreground">Symbols Active</div>
@@ -506,6 +590,11 @@ export function DetailedLoggingDialog() {
                 <div className="text-pink-600 font-bold text-lg">{summary.avgCycleDuration}ms</div>
                 <div className="text-muted-foreground">Avg Cycle</div>
               </div>
+            </div>
+
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded bg-slate-50 p-2">Realtime cycles: <span className="font-semibold">{summary.realtimeCycles || 0}</span></div>
+              <div className="rounded bg-slate-50 p-2">Realtime active connections: <span className="font-semibold">{summary.realtimeRunningConnections || 0}</span></div>
             </div>
             
             {/* Pseudo Positions Breakdown */}

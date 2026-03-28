@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { initRedis, getAllConnections, getConnectionPositions, getConnectionTrades, getRedisClient } from "@/lib/redis-db"
+import { initRedis, getAllConnections, getConnectionPositions, getConnectionTrades, getRedisClient, getSettings } from "@/lib/redis-db"
 import { ProgressionStateManager } from "@/lib/progression-state-manager"
 import { getProgressionLogs } from "@/lib/engine-progression-logs"
 
@@ -13,6 +13,81 @@ function mapPhaseToType(phase: string) {
 
 function isTruthy(value: unknown): boolean {
   return value === true || value === 1 || value === "1" || value === "true"
+}
+
+const INDICATION_TYPES = ["direction", "move", "active", "optimal", "auto"] as const
+
+function toNumber(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+async function countArrayEntries(client: ReturnType<typeof getRedisClient>, key: string): Promise<number> {
+  try {
+    const raw = await client.get(key)
+    if (!raw) return 0
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw
+    return Array.isArray(parsed) ? parsed.length : 0
+  } catch {
+    return 0
+  }
+}
+
+async function countIndicationsByType(client: ReturnType<typeof getRedisClient>, connectionId: string) {
+  const counters = await Promise.all(
+    INDICATION_TYPES.map(async (type) => ({
+      type,
+      count: toNumber(await client.get(`indications:${connectionId}:${type}:count`).catch(() => 0)),
+    })),
+  )
+
+  const result = counters.reduce(
+    (acc, item) => {
+      acc[item.type] = item.count
+      acc.total += item.count
+      return acc
+    },
+    { direction: 0, move: 0, active: 0, optimal: 0, auto: 0, total: 0 } as Record<string, number>,
+  )
+
+  if (result.total > 0) {
+    return result
+  }
+
+  // Fallback for older/newer set keys where counters are unavailable.
+  for (const type of INDICATION_TYPES) {
+    const keys = await client.keys(`indication_set:${connectionId}:*:${type}*`).catch(() => [])
+    let sum = 0
+    for (const key of keys) {
+      sum += await countArrayEntries(client, key)
+    }
+    result[type] = sum
+    result.total += sum
+  }
+
+  return result
+}
+
+async function countStrategiesByType(client: ReturnType<typeof getRedisClient>, connectionId: string, symbols: string[]) {
+  const uniqueSymbols = Array.from(new Set(symbols.filter(Boolean)))
+  if (uniqueSymbols.length === 0) {
+    uniqueSymbols.push("BTCUSDT", "ETHUSDT")
+  }
+
+  const totals = { base: 0, main: 0, real: 0 }
+
+  for (const symbol of uniqueSymbols) {
+    const [baseCount, mainCount, realCount] = await Promise.all([
+      countArrayEntries(client, `strategies:${connectionId}:${symbol}:base`),
+      countArrayEntries(client, `strategies:${connectionId}:${symbol}:main`),
+      countArrayEntries(client, `strategies:${connectionId}:${symbol}:real`),
+    ])
+    totals.base += baseCount
+    totals.main += mainCount
+    totals.real += realCount
+  }
+
+  return totals
 }
 
 export const dynamic = "force-dynamic"
@@ -37,9 +112,7 @@ export async function GET(request: Request) {
       activeConnections = activeConnections.filter((c: any) => (c.exchange || "").toLowerCase() === selectedExchange)
     }
 
-    const progressionStates = await Promise.all(
-      activeConnections.map((c: any) => ProgressionStateManager.getProgressionState(c.id))
-    )
+    const progressionStates = await Promise.all(activeConnections.map((c: any) => ProgressionStateManager.getProgressionState(c.id)))
 
     const logsByConnection = await Promise.all(
       activeConnections.map((c: any) => getProgressionLogs(c.id))
@@ -66,6 +139,7 @@ export async function GET(request: Request) {
       symbol: log.details?.symbol,
       phase: log.phase,
       message: log.message,
+      connectionId: log.connectionId,
       details: {
         timeframe: log.details?.timeframe,
         timeRange: log.details?.timeRange,
@@ -79,125 +153,228 @@ export async function GET(request: Request) {
       },
     }))
 
-    // Get comprehensive stats from Redis for the first active connection
     const client = getRedisClient()
-    let comprehensiveStats = null
-    
-    if (activeConnections.length > 0) {
-      const focusConnId = activeConnections[0].id
-      
-      // Get indications by type
-      const directionIndications = await client.scard(`indications:${focusConnId}:direction`).catch(() => 0)
-      const moveIndications = await client.scard(`indications:${focusConnId}:move`).catch(() => 0)
-      const activeIndications = await client.scard(`indications:${focusConnId}:active`).catch(() => 0)
-      const optimalIndications = await client.scard(`indications:${focusConnId}:optimal`).catch(() => 0)
-      const autoIndications = await client.scard(`indications:${focusConnId}:auto`).catch(() => 0)
-      
-      // Get pseudo positions by type
-      const basePseudoPositions = await client.scard(`base_pseudo:${focusConnId}`).catch(() => 0)
-      const mainPseudoPositions = await client.scard(`main_pseudo:${focusConnId}`).catch(() => 0)
-      const realPseudoPositions = await client.scard(`real_pseudo:${focusConnId}`).catch(() => 0)
-      
-      // Get base pseudo by indication type
-      const baseDirection = await client.scard(`base_pseudo:${focusConnId}:direction`).catch(() => 0)
-      const baseMove = await client.scard(`base_pseudo:${focusConnId}:move`).catch(() => 0)
-      const baseActive = await client.scard(`base_pseudo:${focusConnId}:active`).catch(() => 0)
-      const baseOptimal = await client.scard(`base_pseudo:${focusConnId}:optimal`).catch(() => 0)
-      
-      // Get live positions
-      const livePositionsCount = await client.scard(`positions:${focusConnId}:live`).catch(() => 0)
-      
-      // Get prehistoric data info
-      const prehistoricSymbols = await client.scard(`prehistoric:${focusConnId}:symbols`).catch(() => 0)
-      let prehistoricDataSize = 0
-      try {
-        const keys = await client.keys(`prehistoric:${focusConnId}:*`)
-        prehistoricDataSize = keys.length
-      } catch { /* ignore */ }
-      
-      // Get intervals processed
-      const intervalsProcessed = await client.scard(`intervals:${focusConnId}:processed`).catch(() => 0)
-      
-      // Get cycle duration from progression state (from settings)
-      let cycleDurationMs = 0
-      try {
-        const cycleData = await client.hgetall(`progression:${focusConnId}`)
-        cycleDurationMs = Number(cycleData?.last_cycle_duration || cycleData?.cycle_duration || 0)
-      } catch { /* ignore */ }
-      
-      comprehensiveStats = {
-        prehistoricSymbols,
-        prehistoricDataSize,
-        intervalsProcessed,
-        indicationsByType: {
-          direction: directionIndications,
-          move: moveIndications,
-          active: activeIndications,
-          optimal: optimalIndications,
-          auto: autoIndications,
-          total: directionIndications + moveIndications + activeIndications + optimalIndications + autoIndications,
-        },
-        pseudoPositionsByType: {
-          baseByIndication: {
+    const perConnection = await Promise.all(
+      activeConnections.map(async (conn: any, index: number) => {
+        const state = (await getSettings(`trade_engine_state:${conn.id}`)) || {}
+        const progression = progressionStates[index] || {}
+        const symbols = Array.isArray((state as any).symbols)
+          ? (state as any).symbols
+          : Array.isArray((state as any).active_symbols)
+            ? (state as any).active_symbols
+            : []
+
+        const [indicationsByType, strategyCounts, basePseudoCount, mainPseudoCount, realPseudoCount, baseDirection, baseMove, baseActive, baseOptimal, livePositionsCount, prehistoricSymbols, prehistoricDataKeys] =
+          await Promise.all([
+            countIndicationsByType(client, conn.id),
+            countStrategiesByType(client, conn.id, symbols),
+            client.scard(`base_pseudo:${conn.id}`).catch(() => 0),
+            client.scard(`main_pseudo:${conn.id}`).catch(() => 0),
+            client.scard(`real_pseudo:${conn.id}`).catch(() => 0),
+            client.scard(`base_pseudo:${conn.id}:direction`).catch(() => 0),
+            client.scard(`base_pseudo:${conn.id}:move`).catch(() => 0),
+            client.scard(`base_pseudo:${conn.id}:active`).catch(() => 0),
+            client.scard(`base_pseudo:${conn.id}:optimal`).catch(() => 0),
+            client.scard(`positions:${conn.id}:live`).catch(() => 0),
+            client.scard(`prehistoric:${conn.id}:symbols`).catch(() => 0),
+            client.keys(`prehistoric:${conn.id}:*`).then((keys) => keys.length).catch(() => 0),
+          ])
+
+        const processedIntervals = toNumber(
+          await client.get(`intervals:${conn.id}:processed_count`).catch(() => 0),
+        )
+
+        return {
+          id: conn.id,
+          symbols,
+          indicationCycles: toNumber((state as any).indication_cycle_count) || toNumber((progression as any).cyclesCompleted),
+          strategyCycles: toNumber((state as any).strategy_cycle_count) || toNumber((progression as any).successfulCycles),
+          realtimeCycles: toNumber((state as any).realtime_cycle_count),
+          strategiesEvaluated: toNumber((state as any).total_strategies_evaluated),
+          durations: {
+            indication: toNumber((state as any).indication_avg_duration_ms),
+            strategy: toNumber((state as any).strategy_avg_duration_ms),
+            realtime: toNumber((state as any).realtime_avg_duration_ms),
+          },
+          indicationsByType,
+          strategyCounts,
+          pseudoCounts: {
+            base: basePseudoCount,
+            main: mainPseudoCount,
+            real: realPseudoCount,
+          },
+          basePseudoByIndication: {
             direction: baseDirection,
             move: baseMove,
             active: baseActive,
             optimal: baseOptimal,
           },
-        },
-        livePositions: livePositionsCount,
-        cycleDurationMs,
-      }
-    }
-    
-    const indicationCycles = progressionStates.reduce((sum, p) => sum + (p.cyclesCompleted || 0), 0)
-    const strategyCycles = progressionStates.reduce((sum, p) => sum + (p.successfulCycles || 0), 0)
+          livePositions: livePositionsCount,
+          prehistoric: {
+            loaded: isTruthy((state as any).prehistoric_data_loaded),
+            symbols: prehistoricSymbols || toNumber((state as any).config_set_symbols_processed),
+            dataKeys: prehistoricDataKeys,
+            indicationResults: toNumber((state as any).config_set_indication_results),
+            strategyPositions: toNumber((state as any).config_set_strategy_positions),
+            candlesProcessed: toNumber((state as any).config_set_candles_processed),
+            symbolsProcessed: toNumber((state as any).config_set_symbols_processed),
+            symbolsTotal: toNumber((state as any).config_set_symbols_total),
+            symbolsWithoutData: toNumber((state as any).config_set_symbols_without_data),
+            errors: toNumber((state as any).config_set_errors),
+            durationMs: toNumber((state as any).config_set_duration_ms),
+            lastProcessedAt: (state as any).prehistoric_last_processed_at || null,
+          },
+          intervalsProcessed: processedIntervals,
+        }
+      }),
+    )
+
+    const indicationCycles = perConnection.reduce((sum, item) => sum + item.indicationCycles, 0)
+    const strategyCycles = perConnection.reduce((sum, item) => sum + item.strategyCycles, 0)
+    const realtimeCycles = perConnection.reduce((sum, item) => sum + item.realtimeCycles, 0)
     const totalPositions = positionsByConnection.reduce((sum, arr) => sum + arr.length, 0)
     const totalTrades = tradesByConnection.reduce((sum, arr) => sum + arr.length, 0)
-    
-    // Use pre-computed comprehensive stats values
-    const basePseudoCount = comprehensiveStats ? (await client.scard(`base_pseudo:${activeConnections[0]?.id}`).catch(() => 0)) : totalPositions
-    const mainPseudoCount = comprehensiveStats ? (await client.scard(`main_pseudo:${activeConnections[0]?.id}`).catch(() => 0)) : strategyCycles
-    const realPseudoCount = comprehensiveStats ? (await client.scard(`real_pseudo:${activeConnections[0]?.id}`).catch(() => 0)) : totalTrades
+
+    const aggregatedIndications = perConnection.reduce(
+      (acc, item) => {
+        acc.direction += item.indicationsByType.direction || 0
+        acc.move += item.indicationsByType.move || 0
+        acc.active += item.indicationsByType.active || 0
+        acc.optimal += item.indicationsByType.optimal || 0
+        acc.auto += item.indicationsByType.auto || 0
+        acc.total += item.indicationsByType.total || 0
+        return acc
+      },
+      { direction: 0, move: 0, active: 0, optimal: 0, auto: 0, total: 0 },
+    )
+
+    const aggregatedStrategyCounts = perConnection.reduce(
+      (acc, item) => {
+        acc.base += item.strategyCounts.base
+        acc.main += item.strategyCounts.main
+        acc.real += item.strategyCounts.real
+        return acc
+      },
+      { base: 0, main: 0, real: 0 },
+    )
+
+    const aggregatedPseudo = perConnection.reduce(
+      (acc, item) => {
+        acc.base += item.pseudoCounts.base
+        acc.main += item.pseudoCounts.main
+        acc.real += item.pseudoCounts.real
+        return acc
+      },
+      { base: 0, main: 0, real: 0 },
+    )
+
+    const aggregatedPrehistoric = perConnection.reduce(
+      (acc, item) => {
+        acc.symbols += item.prehistoric.symbols
+        acc.dataKeys += item.prehistoric.dataKeys
+        acc.indicationResults += item.prehistoric.indicationResults
+        acc.strategyPositions += item.prehistoric.strategyPositions
+        acc.candlesProcessed += item.prehistoric.candlesProcessed
+        acc.symbolsProcessed += item.prehistoric.symbolsProcessed
+        acc.symbolsTotal += item.prehistoric.symbolsTotal
+        acc.symbolsWithoutData += item.prehistoric.symbolsWithoutData
+        acc.errors += item.prehistoric.errors
+        acc.durationMs += item.prehistoric.durationMs
+        return acc
+      },
+      {
+        symbols: 0,
+        dataKeys: 0,
+        indicationResults: 0,
+        strategyPositions: 0,
+        candlesProcessed: 0,
+        symbolsProcessed: 0,
+        symbolsTotal: 0,
+        symbolsWithoutData: 0,
+        errors: 0,
+        durationMs: 0,
+      },
+    )
+
+    const intervalsProcessed = perConnection.reduce((sum, item) => sum + item.intervalsProcessed, 0)
+    const livePositions = perConnection.reduce((sum, item) => sum + item.livePositions, 0)
+    const cycleDurationMs = perConnection.length
+      ? Math.round(
+          perConnection.reduce(
+            (sum, item) => sum + Math.max(item.durations.indication, item.durations.strategy, item.durations.realtime),
+            0,
+          ) / perConnection.length,
+        )
+      : 0
+    const avgCycleDuration = perConnection.length
+      ? Math.round(
+          perConnection.reduce(
+            (sum, item) => sum + item.durations.indication + item.durations.strategy + item.durations.realtime,
+            0,
+          ) / Math.max(1, perConnection.length * 3),
+        )
+      : 0
+
+    const basePseudoByIndication = perConnection.reduce(
+      (acc, item) => {
+        acc.direction += item.basePseudoByIndication.direction
+        acc.move += item.basePseudoByIndication.move
+        acc.active += item.basePseudoByIndication.active
+        acc.optimal += item.basePseudoByIndication.optimal
+        return acc
+      },
+      { direction: 0, move: 0, active: 0, optimal: 0 },
+    )
 
     const summary = {
       symbolsActive: Math.max(1, activeConnections.length),
       indicationCycles,
       strategyCycles,
-      totalIndicationsCalculated: comprehensiveStats?.indicationsByType?.total || indicationCycles,
-      totalStrategiesEvaluated: strategyCycles,
+      totalIndicationsCalculated: aggregatedIndications.total || indicationCycles,
+      totalStrategiesEvaluated:
+        perConnection.reduce((sum, item) => sum + item.strategiesEvaluated, 0) ||
+        aggregatedStrategyCounts.main ||
+        strategyCycles,
       pseudoPositions: {
-        base: basePseudoCount,
-        main: mainPseudoCount,
-        real: realPseudoCount,
-        total: basePseudoCount + mainPseudoCount + realPseudoCount,
+        base: aggregatedPseudo.base || totalPositions,
+        main: aggregatedPseudo.main || strategyCycles,
+        real: aggregatedPseudo.real || totalTrades,
+        total: (aggregatedPseudo.base || totalPositions) + (aggregatedPseudo.main || strategyCycles) + (aggregatedPseudo.real || totalTrades),
       },
       // Extended stats
-      prehistoricSymbols: comprehensiveStats?.prehistoricSymbols || 0,
-      prehistoricDataSize: comprehensiveStats?.prehistoricDataSize || 0,
-      intervalsProcessed: comprehensiveStats?.intervalsProcessed || 0,
-      indicationsByType: comprehensiveStats?.indicationsByType || {
-        direction: 0, move: 0, active: 0, optimal: 0, auto: 0, total: 0
+      prehistoricSymbols: aggregatedPrehistoric.symbols,
+      prehistoricDataSize: aggregatedPrehistoric.dataKeys,
+      intervalsProcessed,
+      indicationsByType: aggregatedIndications,
+      strategyCountsByType: aggregatedStrategyCounts,
+      strategyEvaluatedByType: {
+        base: aggregatedStrategyCounts.base,
+        main: aggregatedStrategyCounts.main,
+        real: aggregatedStrategyCounts.real,
       },
-      pseudoPositionsByType: comprehensiveStats?.pseudoPositionsByType || {
-        baseByIndication: { direction: 0, move: 0, active: 0, optimal: 0 }
+      pseudoPositionsByType: {
+        baseByIndication: basePseudoByIndication,
       },
-      livePositions: comprehensiveStats?.livePositions || 0,
-      cycleDurationMs: comprehensiveStats?.cycleDurationMs || 0,
-      configsProcessed: activeConnections.length,
-      evalsCompleted: strategyCycles,
-      avgCycleDuration: logs.length > 0
-        ? Math.round(
-            logs
-              .map((l: any) => Number(l.details?.cycleDuration || 0))
-              .filter((v: number) => v > 0)
-              .reduce((a: number, b: number) => a + b, 0) /
-              Math.max(1, logs.filter((l: any) => Number(l.details?.cycleDuration || 0) > 0).length)
-          )
-        : 0,
+      livePositions,
+      cycleDurationMs,
+      realtimeCycles,
+      realtimeRunningConnections: perConnection.filter((item) => item.realtimeCycles > 0).length,
+      prehistoricProcessing: {
+        symbolsProcessed: aggregatedPrehistoric.symbolsProcessed,
+        symbolsTotal: aggregatedPrehistoric.symbolsTotal,
+        symbolsWithoutData: aggregatedPrehistoric.symbolsWithoutData,
+        candlesProcessed: aggregatedPrehistoric.candlesProcessed,
+        indicationResults: aggregatedPrehistoric.indicationResults,
+        strategyPositions: aggregatedPrehistoric.strategyPositions,
+        errors: aggregatedPrehistoric.errors,
+        durationMs: aggregatedPrehistoric.durationMs,
+      },
+      configsProcessed: perConnection.reduce((sum, item) => sum + item.prehistoric.indicationResults + item.prehistoric.strategyPositions, 0),
+      evalsCompleted: aggregatedStrategyCounts.base + aggregatedStrategyCounts.main + aggregatedStrategyCounts.real,
+      avgCycleDuration,
       lastUpdate: new Date().toISOString(),
       errors: logs.filter((log: any) => log.type === "error").length,
-      warnings: logs.filter((log: any) => log.message.toLowerCase().includes("warn")).length,
+      warnings: logs.filter((log: any) => String(log.message || "").toLowerCase().includes("warn")).length,
     }
 
     return NextResponse.json({

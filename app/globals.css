@@ -58,6 +58,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  padding: 0;
+  margin: 0;
 }
 
 html {
@@ -67,7 +69,15 @@ html {
 
 /* Ensure pages have proper overflow handling */
 main {
-  overflow-x: hidden;
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* Page content wrapper */
+.page-content {
+  padding: 1.5rem;
+  width: 100%;
+  min-height: calc(100vh - 3.5rem);
 }
 
 /* Custom scrollbar */

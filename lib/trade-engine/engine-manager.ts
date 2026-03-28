@@ -159,14 +159,13 @@ export class TradeEngineManager {
         }
       }
 
-      // Phase 2: Load prehistoric data (historical data retrieval + calculation)
-      // PHASE 1 FIX: Check cache before loading to prevent redundant API calls
+      // Phase 2: Load prehistoric data (NON-BLOCKING - runs in background)
+      // PHASE 6 FIX: Prehistoric loading is now non-blocking to speed up engine startup
       const prehistoricCacheKey = `prehistoric_loaded:${this.connectionId}`
       const redisClient = getRedisClient()
       const prehistoricCached = await redisClient.get(prehistoricCacheKey)
       
       if (prehistoricCached === "1") {
-        // Already loaded recently, skip reload
         console.log(`[v0] [EngineManager] Phase 2/6: Prehistoric data already cached (24h TTL), skipping reload`)
         await this.updateProgressionPhase("prehistoric_data", 15, "Historical data cached")
         await setSettings(`trade_engine_state:${this.connectionId}`, {
@@ -175,49 +174,15 @@ export class TradeEngineManager {
           updated_at: new Date().toISOString(),
         })
       } else {
-        // Not cached, load from exchange
-        console.log(`[v0] [EngineManager] Phase 2/6: Starting prehistoric data loading (background)...`)
-        await this.updateProgressionPhase("prehistoric_data", 15, "Loading historical market data...")
-
-        // Start prehistoric loading and keep a recovery path if it fails
-        try {
-          await Promise.race([
-            this.loadPrehistoricData(),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Prehistoric loading timeout')), 30000)
-            )
-          ])
-          console.log(`[v0] [EngineManager] Phase 2/6: ✓ Prehistoric data loaded successfully`)
-          
-          // PHASE 1 FIX: Set cache for 24 hours to prevent reloading
-          await redisClient.set(prehistoricCacheKey, "1", { EX: 86400 })
-          console.log(`[v0] [EngineManager] ✓ Prehistoric cache set for 24 hours`)
-          
-          await setSettings(`trade_engine_state:${this.connectionId}`, {
-            prehistoric_data_loaded: true,
-            prehistoric_data_source: "exchange",
-            updated_at: new Date().toISOString(),
-          })
-        } catch (err) {
-          console.warn(`[v0] [EngineManager] Prehistoric data loading error (continuing anyway):`, err)
-          await setSettings(`trade_engine_state:${this.connectionId}`, {
-            prehistoric_data_loaded: false,
-            prehistoric_data_error: err instanceof Error ? err.message : String(err),
-            updated_at: new Date().toISOString(),
-          })
-          // Retry with a reduced fallback symbol set so realtime/strategy processing can still start cleanly
-          try {
-            const fallbackSymbols = ["BTCUSDT", "ETHUSDT"]
-            await loadMarketDataForEngine(fallbackSymbols)
-            await this.updateProgressionPhase("prehistoric_data", 18, "Fallback historical data loaded")
-            console.log(`[v0] [EngineManager] Fallback prehistoric data loaded for ${fallbackSymbols.join(", ")}`)
-          } catch (fallbackErr) {
-            console.warn(`[v0] [EngineManager] Fallback prehistoric loading also failed:`, fallbackErr)
-          }
-        }
+        // PHASE 6 FIX: Non-blocking prehistoric loading - runs in background
+        console.log(`[v0] [EngineManager] Phase 2/6: Starting prehistoric data loading (BACKGROUND, non-blocking)...`)
+        await this.updateProgressionPhase("prehistoric_data", 15, "Loading historical data in background...")
+        
+        // Run prehistoric loading in background without blocking startup
+        this.loadPrehistoricDataInBackground(prehistoricCacheKey, redisClient)
       }
 
-      console.log(`[v0] [EngineManager] Phase 2/6: Proceeding to indication processor setup`)
+      console.log(`[v0] [EngineManager] Phase 2/6: Proceeding to indication processor setup (prehistoric loading in background)`)
       // Phase 3: Start indication processor - immediate phase update
       console.log(`[v0] [EngineManager] Phase 3/6: Starting indication processor (${symbols.length} symbols)`)
       await this.updateProgressionPhase("indications", 60, "Processing indications continuously")
@@ -386,6 +351,41 @@ export class TradeEngineManager {
     await this.updateProgressionPhase("stopped", 0, "Engine stopped")
 
     console.log("[v0] Trade engine stopped and timers cleared")
+  }
+
+  /**
+   * PHASE 6: Non-blocking prehistoric data loading
+   * Runs in background without blocking engine startup
+   * Allows engine to proceed to processor startup immediately
+   */
+  private loadPrehistoricDataInBackground(cacheKey: string, redisClient: ReturnType<typeof getRedisClient>): void {
+    this.updateProgressionPhase("prehistoric_data", 15, "Loading historical data in background...")
+      .then(() => this.loadPrehistoricData())
+      .then(async () => {
+        console.log(`[v0] [EngineManager] ✓ Background prehistoric data loaded successfully`)
+        await redisClient.set(cacheKey, "1", { EX: 86400 })
+        await setSettings(`trade_engine_state:${this.connectionId}`, {
+          prehistoric_data_loaded: true,
+          prehistoric_data_source: "background",
+          updated_at: new Date().toISOString(),
+        })
+      })
+      .catch(async (err) => {
+        console.warn(`[v0] [EngineManager] Background prehistoric loading failed (non-blocking):`, err)
+        await setSettings(`trade_engine_state:${this.connectionId}`, {
+          prehistoric_data_loaded: false,
+          prehistoric_data_error: err instanceof Error ? err.message : String(err),
+          updated_at: new Date().toISOString(),
+        })
+        // Fallback: load minimal market data
+        try {
+          const fallbackSymbols = ["BTCUSDT", "ETHUSDT"]
+          await loadMarketDataForEngine(fallbackSymbols)
+          console.log(`[v0] [EngineManager] Fallback market data loaded for ${fallbackSymbols.join(", ")}`)
+        } catch (fallbackErr) {
+          console.warn(`[v0] [EngineManager] Fallback loading also failed:`, fallbackErr)
+        }
+      })
   }
 
   /**

@@ -7,6 +7,11 @@ import { createExchangeConnector } from "@/lib/exchange-connectors"
 import { getGlobalTradeEngineCoordinator } from "@/lib/trade-engine"
 import { loadSettingsAsync } from "@/lib/settings-storage"
 
+function toNumber(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
@@ -352,18 +357,31 @@ export async function POST(request: Request) {
     // Calculate comprehensive engine counts from Redis
     const startStatsTime = Date.now()
     
+    const engineState = await client.hgetall(`settings:trade_engine_state:${connectionId}`).catch(() => ({} as Record<string, string>)) || {}
+
     // Basic counts
-    const indicationsCount = await client.scard(`indications:${connectionId}`).catch(() => 0)
-    const strategiesCount = await client.scard(`strategies:${connectionId}`).catch(() => 0)
+    const indicationsCount = toNumber(await client.get(`indications:${connectionId}:count`).catch(() => 0))
+    const strategiesCount = toNumber(await client.get(`strategies:${connectionId}:count`).catch(() => 0))
     const positionsCount = await client.scard(`positions:${connectionId}`).catch(() => 0)
     const tradesCount = await client.scard(`trades:${connectionId}`).catch(() => 0)
     
     // Detailed indication counts by type
-    const directionIndications = await client.scard(`indications:${connectionId}:direction`).catch(() => 0)
-    const moveIndications = await client.scard(`indications:${connectionId}:move`).catch(() => 0)
-    const activeIndications = await client.scard(`indications:${connectionId}:active`).catch(() => 0)
-    const optimalIndications = await client.scard(`indications:${connectionId}:optimal`).catch(() => 0)
-    const autoIndications = await client.scard(`indications:${connectionId}:auto`).catch(() => 0)
+    const directionIndications = toNumber(await client.get(`indications:${connectionId}:direction:count`).catch(() => 0))
+    const moveIndications = toNumber(await client.get(`indications:${connectionId}:move:count`).catch(() => 0))
+    const activeIndications = toNumber(await client.get(`indications:${connectionId}:active:count`).catch(() => 0))
+    const optimalIndications = toNumber(await client.get(`indications:${connectionId}:optimal:count`).catch(() => 0))
+    const autoIndications = toNumber(await client.get(`indications:${connectionId}:auto:count`).catch(() => 0))
+
+    const strategyCounts = {
+      base: toNumber(await client.get(`strategies:${connectionId}:base:count`).catch(() => 0)),
+      main: toNumber(await client.get(`strategies:${connectionId}:main:count`).catch(() => 0)),
+      real: toNumber(await client.get(`strategies:${connectionId}:real:count`).catch(() => 0)),
+    }
+    const strategyEvaluated = {
+      base: toNumber(await client.get(`strategies:${connectionId}:base:evaluated`).catch(() => 0)),
+      main: toNumber(await client.get(`strategies:${connectionId}:main:evaluated`).catch(() => 0)),
+      real: toNumber(await client.get(`strategies:${connectionId}:real:evaluated`).catch(() => 0)),
+    }
     
     // Pseudo positions by type
     const basePseudoPositions = await client.scard(`base_pseudo:${connectionId}`).catch(() => 0)
@@ -382,11 +400,11 @@ export async function POST(request: Request) {
     } catch { /* ignore */ }
     
     // Get intervals processed
-    const intervalsProcessed = await client.scard(`intervals:${connectionId}:processed`).catch(() => 0)
+    const intervalsProcessed = toNumber(await client.get(`intervals:${connectionId}:processed_count`).catch(() => 0))
     
     // Get cycle duration from settings
     const progressionState = await client.hgetall(`progression:${connectionId}`).catch(() => ({} as Record<string, string>)) || {}
-    const cycleDuration = Number(progressionState?.last_cycle_duration || progressionState?.cycle_duration || 0)
+    const cycleDuration = Number(engineState?.last_cycle_duration || progressionState?.last_cycle_duration || progressionState?.cycle_duration || 0)
     const totalCycleDuration = Date.now() - startStatsTime
     
     // Build comprehensive stats object
@@ -401,14 +419,16 @@ export async function POST(request: Request) {
       intervalsProcessed,
       
       // Indications by type
-      indicationsByType: {
-        direction: directionIndications,
-        move: moveIndications,
-        active: activeIndications,
-        optimal: optimalIndications,
-        auto: autoIndications,
-        total: indicationsCount,
-      },
+       indicationsByType: {
+         direction: directionIndications,
+         move: moveIndications,
+         active: activeIndications,
+         optimal: optimalIndications,
+         auto: autoIndications,
+         total: indicationsCount || directionIndications + moveIndications + activeIndications + optimalIndications + autoIndications,
+       },
+       strategyCounts,
+       strategyEvaluated,
       
       // Pseudo positions by type
       pseudoPositions: {
@@ -467,6 +487,8 @@ export async function POST(request: Request) {
         },
         intervalsProcessed: overallStats.intervalsProcessed,
         indicationsByType: overallStats.indicationsByType,
+        strategyCounts: overallStats.strategyCounts,
+        strategyEvaluated: overallStats.strategyEvaluated,
         pseudoPositions: overallStats.pseudoPositions,
         livePositions: overallStats.livePositions,
         cycleTimeMs: overallStats.cycleDurationMs,

@@ -65,6 +65,40 @@ export async function trackStrategyStats(
   } catch (e) {
     console.warn(`[v0] [Stats] Failed to track strategy:`, e instanceof Error ? e.message : String(e))
   }
+
+  try {
+    await initRedis()
+    const client = getRedisClient()
+
+    await client.incr(`strategies:${connectionId}:${strategyType}:count`)
+    await client.expire(`strategies:${connectionId}:${strategyType}:count`, 86400)
+    await client.incr(`strategies:${connectionId}:count`)
+    await client.expire(`strategies:${connectionId}:count`, 86400)
+
+    for (let i = 0; i < totalCreated; i++) {
+      await client.incr(`strategies:${connectionId}:${strategyType}:evaluated`)
+    }
+    await client.expire(`strategies:${connectionId}:${strategyType}:evaluated`, 86400)
+    for (let i = 0; i < passedCount; i++) {
+      await client.incr(`strategies:${connectionId}:${strategyType}:passed`)
+    }
+    await client.expire(`strategies:${connectionId}:${strategyType}:passed`, 86400)
+
+    await client.set(
+      `strategies:${connectionId}:${strategyType}:latest`,
+      JSON.stringify({
+        symbol,
+        totalCreated,
+        passedCount,
+        profitFactor,
+        drawdownTimeMinutes,
+        timestamp: Date.now(),
+      }),
+    )
+    await client.expire(`strategies:${connectionId}:${strategyType}:latest`, 3600)
+  } catch (e) {
+    console.error(`[v0] [Stats] Failed to track strategy in Redis:`, e instanceof Error ? e.message : String(e))
+  }
 }
 
 /**

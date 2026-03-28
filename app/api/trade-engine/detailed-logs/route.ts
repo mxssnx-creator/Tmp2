@@ -90,6 +90,28 @@ async function countStrategiesByType(client: ReturnType<typeof getRedisClient>, 
   return totals
 }
 
+async function getStrategyEvaluationCounters(client: ReturnType<typeof getRedisClient>, connectionId: string) {
+  const [baseEvaluated, mainEvaluated, realEvaluated, basePassed, mainPassed, realPassed] = await Promise.all([
+    client.get(`strategies:${connectionId}:base:evaluated`).catch(() => 0),
+    client.get(`strategies:${connectionId}:main:evaluated`).catch(() => 0),
+    client.get(`strategies:${connectionId}:real:evaluated`).catch(() => 0),
+    client.get(`strategies:${connectionId}:base:passed`).catch(() => 0),
+    client.get(`strategies:${connectionId}:main:passed`).catch(() => 0),
+    client.get(`strategies:${connectionId}:real:passed`).catch(() => 0),
+  ])
+
+  return {
+    base: toNumber(baseEvaluated),
+    main: toNumber(mainEvaluated),
+    real: toNumber(realEvaluated),
+    passed: {
+      base: toNumber(basePassed),
+      main: toNumber(mainPassed),
+      real: toNumber(realPassed),
+    },
+  }
+}
+
 export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
@@ -164,10 +186,11 @@ export async function GET(request: Request) {
             ? (state as any).active_symbols
             : []
 
-        const [indicationsByType, strategyCounts, basePseudoCount, mainPseudoCount, realPseudoCount, baseDirection, baseMove, baseActive, baseOptimal, livePositionsCount, prehistoricSymbols, prehistoricDataKeys] =
+        const [indicationsByType, strategyCounts, strategyEvaluations, basePseudoCount, mainPseudoCount, realPseudoCount, baseDirection, baseMove, baseActive, baseOptimal, livePositionsCount, prehistoricSymbols, prehistoricDataKeys] =
           await Promise.all([
             countIndicationsByType(client, conn.id),
             countStrategiesByType(client, conn.id, symbols),
+            getStrategyEvaluationCounters(client, conn.id),
             client.scard(`base_pseudo:${conn.id}`).catch(() => 0),
             client.scard(`main_pseudo:${conn.id}`).catch(() => 0),
             client.scard(`real_pseudo:${conn.id}`).catch(() => 0),
@@ -198,6 +221,7 @@ export async function GET(request: Request) {
           },
           indicationsByType,
           strategyCounts,
+          strategyEvaluations,
           pseudoCounts: {
             base: basePseudoCount,
             main: mainPseudoCount,
@@ -256,6 +280,19 @@ export async function GET(request: Request) {
         return acc
       },
       { base: 0, main: 0, real: 0 },
+    )
+
+    const aggregatedStrategyEvaluations = perConnection.reduce(
+      (acc, item) => {
+        acc.base += item.strategyEvaluations.base
+        acc.main += item.strategyEvaluations.main
+        acc.real += item.strategyEvaluations.real
+        acc.passed.base += item.strategyEvaluations.passed.base
+        acc.passed.main += item.strategyEvaluations.passed.main
+        acc.passed.real += item.strategyEvaluations.passed.real
+        return acc
+      },
+      { base: 0, main: 0, real: 0, passed: { base: 0, main: 0, real: 0 } },
     )
 
     const aggregatedPseudo = perConnection.reduce(
@@ -348,10 +385,11 @@ export async function GET(request: Request) {
       indicationsByType: aggregatedIndications,
       strategyCountsByType: aggregatedStrategyCounts,
       strategyEvaluatedByType: {
-        base: aggregatedStrategyCounts.base,
-        main: aggregatedStrategyCounts.main,
-        real: aggregatedStrategyCounts.real,
+        base: aggregatedStrategyEvaluations.base || aggregatedStrategyCounts.base,
+        main: aggregatedStrategyEvaluations.main || aggregatedStrategyCounts.main,
+        real: aggregatedStrategyEvaluations.real || aggregatedStrategyCounts.real,
       },
+      strategyPassedByType: aggregatedStrategyEvaluations.passed,
       pseudoPositionsByType: {
         baseByIndication: basePseudoByIndication,
       },

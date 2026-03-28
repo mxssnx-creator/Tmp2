@@ -639,6 +639,12 @@ export class TradeEngineManager {
           const client = getRedisClient()
           await client.incr(`intervals:${this.connectionId}:processed_count`)
           await client.expire(`intervals:${this.connectionId}:processed_count`, 86400) // 24h TTL
+          await setSettings(`trade_engine_state:${this.connectionId}`, {
+            last_cycle_duration: duration,
+            last_cycle_type: "indications",
+            total_indications_evaluated: totalStrategiesEvaluated,
+            updated_at: new Date().toISOString(),
+          })
         } catch { /* ignore Redis errors */ }
 
         // Track detailed performance metrics
@@ -735,6 +741,9 @@ export class TradeEngineManager {
             last_strategy_run: new Date().toISOString(),
             strategy_cycle_count: cycleCount,
             strategy_avg_duration_ms: totalDuration > 0 ? Math.round(totalDuration / cycleCount) : 0,
+            total_strategies_evaluated: totalStrategiesEvaluated,
+            last_cycle_duration: duration,
+            last_cycle_type: "strategies",
             engine_cycles_total: cycleCount,
           })
         } catch (err) {
@@ -835,6 +844,8 @@ export class TradeEngineManager {
             last_realtime_run: new Date().toISOString(),
             realtime_cycle_count: cycleCount,
             realtime_avg_duration_ms: totalDuration > 0 ? Math.round(totalDuration / cycleCount) : 0,
+            last_cycle_duration: duration,
+            last_cycle_type: "realtime",
             engine_cycles_total: cycleCount,
           })
         } catch (err) {

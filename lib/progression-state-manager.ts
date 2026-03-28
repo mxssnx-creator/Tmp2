@@ -131,6 +131,7 @@ export class ProgressionStateManager {
         successful_cycles: String(newSuccessful),
         failed_cycles: String(newFailed),
         cycle_success_rate: String(successRate.toFixed(2)),
+        last_cycle_time: new Date().toISOString(),
         last_update: new Date().toISOString(),
         connection_id: connectionId,
       })

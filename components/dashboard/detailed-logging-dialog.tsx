@@ -79,6 +79,11 @@ interface ProgressSummary {
     main: number
     real: number
   }
+  strategyPassedByType?: {
+    base: number
+    main: number
+    real: number
+  }
   pseudoPositionsByType: {
     baseByIndication: {
       direction: number
@@ -299,6 +304,11 @@ export function DetailedLoggingDialog() {
                       <div className="bg-emerald-100 rounded p-1 text-center text-[10px]">Eval Base: {summary.strategyEvaluatedByType?.base || 0}</div>
                       <div className="bg-emerald-100 rounded p-1 text-center text-[10px]">Eval Main: {summary.strategyEvaluatedByType?.main || 0}</div>
                       <div className="bg-emerald-100 rounded p-1 text-center text-[10px]">Eval Real: {summary.strategyEvaluatedByType?.real || 0}</div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      <div className="bg-emerald-200/70 rounded p-1 text-center text-[10px]">Passed Base: {summary.strategyPassedByType?.base || 0}</div>
+                      <div className="bg-emerald-200/70 rounded p-1 text-center text-[10px]">Passed Main: {summary.strategyPassedByType?.main || 0}</div>
+                      <div className="bg-emerald-200/70 rounded p-1 text-center text-[10px]">Passed Real: {summary.strategyPassedByType?.real || 0}</div>
                     </div>
                   </div>
 

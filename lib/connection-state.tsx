@@ -149,13 +149,18 @@ export function ConnectionStateProvider({ children }: { children: ReactNode }) {
         
         setExchangeConnectionsActive(activeConns)
         
-        // Initialize status map - use is_enabled_dashboard for the active toggle (independent)
-        const statusMap = new Map<string, boolean>()
+        // PRESERVE EXISTING DASHBOARD TOGGLE STATE - only update for new connections
+        // This prevents overwriting user's manual toggle changes
+        const newStatusMap = new Map<string, boolean>(exchangeConnectionsActiveStatus) // Copy existing state
         activeConns.forEach((conn: ExchangeConnection) => {
-          const isDashboardEnabled = (conn as any).is_enabled_dashboard === true || (conn as any).is_enabled_dashboard === "1" || (conn as any).is_enabled_dashboard === "true"
-          statusMap.set(conn.id, isDashboardEnabled)
+          // Only initialize status for new connections, preserve existing user toggle state
+          if (!newStatusMap.has(conn.id)) {
+            const isDashboardEnabled = (conn as any).is_enabled_dashboard === true || (conn as any).is_enabled_dashboard === "1" || (conn as any).is_enabled_dashboard === "true"
+            newStatusMap.set(conn.id, isDashboardEnabled)
+          }
+          // Keep existing user toggle state unchanged
         })
-        setExchangeConnectionsActiveStatus(statusMap)
+        setExchangeConnectionsActiveStatus(newStatusMap)
       }
     } catch (error) {
       console.error("[v0] [ConnectionState] Failed to load Active Connections:", error)

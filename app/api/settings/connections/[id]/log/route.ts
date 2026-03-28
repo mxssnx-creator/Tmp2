@@ -74,68 +74,68 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       return acc
     }, {})
 
-    // Enhanced summary with prehistoric data, indications, strategies, and cycle info
-    const enhancedSummary = {
-      total: logs.length,
-      ...levelSummary,
-      phases: phaseSummary,
-      latestTimestamp: logs[0]?.timestamp || null,
-      oldestTimestamp: logs[logs.length - 1]?.timestamp || null,
-      
-      // Prehistoric data processing info
-      prehistoricData: {
-        cyclesCompleted: progressionState.prehistoricCyclesCompleted || 0,
-        symbolsProcessed: Array.isArray(progressionState.prehistoricSymbolsProcessed) ? progressionState.prehistoricSymbolsProcessed.length : 0,
-        candlesProcessed: 0, // Not directly tracked in ProgressionState, using 0 as placeholder
-        phaseActive: progressionState.prehistoricPhaseActive || false,
-        lastUpdate: progressionState.lastUpdate?.toISOString() || null
-      },
-      
-      // Indications and strategies counts (using available properties)
-      indicationsCounts: {
-        direction: 0, // Not directly tracked, using 0 as placeholder
-        move: 0, // Not directly tracked, using 0 as placeholder
-        active: 0, // Not directly tracked, using 0 as placeholder
-        optimal: 0, // Not directly tracked, using 0 as placeholder
-        auto: 0 // Not directly tracked, using 0 as placeholder
-      },
-      
-      // Strategy count sets and evaluated counts (using available properties)
-      strategyCounts: {
-        base: {
-          total: 0, // Not directly tracked, using 0 as placeholder
-          evaluated: 0, // Not directly tracked, using 0 as placeholder
-          pending: 0
-        },
-        main: {
-          total: 0, // Not directly tracked, using 0 as placeholder
-          evaluated: 0, // Not directly tracked, using 0 as placeholder
-          pending: 0
-        },
-        real: {
-          total: 0, // Not directly tracked, using 0 as placeholder
-          evaluated: 0, // Not directly tracked, using 0 as placeholder
-          pending: 0
-        }
-      },
-      
-      // Engine performance info
-      enginePerformance: {
-        cycleTimeMs: 0, // Not directly tracked in ProgressionState, using 0 as placeholder
-        cyclesCompleted: progressionState.cyclesCompleted || 0,
-        successfulCycles: progressionState.successfulCycles || 0,
-        failedCycles: progressionState.failedCycles || 0,
-        cycleSuccessRate: progressionState.cycleSuccessRate || 0,
-        totalTrades: progressionState.totalTrades || 0,
-        successfulTrades: progressionState.successfulTrades || 0,
-        tradeSuccessRate: progressionState.tradeSuccessRate || 0,
-        totalProfit: progressionState.totalProfit || 0,
-        lastCycleTime: progressionState.lastCycleTime?.toISOString() || null,
-        intervalsProcessed: 0, // Not directly tracked, using 0 as placeholder
-        indicationsCount: 0, // Not directly tracked, using 0 as placeholder
-        strategiesCount: 0 // Not directly tracked, using 0 as placeholder
-      }
-    }
+     // Enhanced summary with prehistoric data, indications, strategies, and cycle info
+     const enhancedSummary = {
+       total: logs.length,
+       ...levelSummary,
+       phases: phaseSummary,
+       latestTimestamp: logs[0]?.timestamp || null,
+       oldestTimestamp: logs[logs.length - 1]?.timestamp || null,
+       
+       // Prehistoric data processing info
+       prehistoricData: {
+         cyclesCompleted: progressionState.prehistoricCyclesCompleted || 0,
+         symbolsProcessed: Array.isArray(progressionState.prehistoricSymbolsProcessed) ? progressionState.prehistoricSymbolsProcessed.length : 0,
+         candlesProcessed: progressionState.prehistoricCandlesProcessed || 0,
+         phaseActive: progressionState.prehistoricPhaseActive || false,
+         lastUpdate: progressionState.lastUpdate?.toISOString() || null
+       },
+       
+       // Indications by type (direction, move, active, optimal, auto)
+       indicationsCounts: {
+         direction: progressionState.indicationsDirectionCount || 0,
+         move: progressionState.indicationsMoveCount || 0,
+         active: progressionState.indicationsActiveCount || 0,
+         optimal: progressionState.indicationsOptimalCount || 0,
+         auto: progressionState.indicationsAutoCount || 0
+       },
+       
+       // Strategy count sets and evaluated counts
+       strategyCounts: {
+         base: {
+           total: progressionState.strategiesBaseTotal || 0,
+           evaluated: progressionState.strategyEvaluatedBase || 0,
+           pending: Math.max(0, (progressionState.strategiesBaseTotal || 0) - (progressionState.strategyEvaluatedBase || 0))
+         },
+         main: {
+           total: progressionState.strategiesMainTotal || 0,
+           evaluated: progressionState.strategyEvaluatedMain || 0,
+           pending: Math.max(0, (progressionState.strategiesMainTotal || 0) - (progressionState.strategyEvaluatedMain || 0))
+         },
+         real: {
+           total: progressionState.strategiesRealTotal || 0,
+           evaluated: progressionState.strategyEvaluatedReal || 0,
+           pending: Math.max(0, (progressionState.strategiesRealTotal || 0) - (progressionState.strategyEvaluatedReal || 0))
+         }
+       },
+       
+       // Engine performance info
+       enginePerformance: {
+         cycleTimeMs: progressionState.cycleTimeMs || 0,
+         cyclesCompleted: progressionState.cyclesCompleted || 0,
+         successfulCycles: progressionState.successfulCycles || 0,
+         failedCycles: progressionState.failedCycles || 0,
+         cycleSuccessRate: progressionState.cycleSuccessRate || 0,
+         totalTrades: progressionState.totalTrades || 0,
+         successfulTrades: progressionState.successfulTrades || 0,
+         tradeSuccessRate: progressionState.tradeSuccessRate || 0,
+         totalProfit: progressionState.totalProfit || 0,
+         lastCycleTime: progressionState.lastCycleTime?.toISOString() || null,
+         intervalsProcessed: progressionState.intervalsProcessed || 0,
+         indicationsCount: progressionState.indicationsCount || 0,
+         strategiesCount: progressionState.strategiesCount || 0
+       }
+     }
 
     return NextResponse.json({
       success: true,

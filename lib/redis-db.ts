@@ -72,11 +72,12 @@ export class InlineLocalRedis {
   
   /**
    * Remove all expired keys
+   * @returns Number of keys removed
    */
-  private cleanupExpiredKeys(): void {
+  private cleanupExpiredKeys(): number {
     const now = Date.now()
     const ttlMap = this.data.ttl
-    if (!ttlMap) return
+    if (!ttlMap) return 0
     
     let cleaned = 0
     for (const [key, expireAt] of ttlMap.entries()) {
@@ -90,6 +91,7 @@ export class InlineLocalRedis {
     if (cleaned > 0) {
       console.log(`[v0] [Redis] TTL cleanup: removed ${cleaned} expired keys`)
     }
+    return cleaned
   }
   
   /**
@@ -414,7 +416,7 @@ export class InlineLocalRedis {
   async dbSize(): Promise<number> {
     this.trackOperation()
     // Clean up expired keys first for accurate count
-    this.cleanupExpiredKeys()
+    this.cleanupExpiredKeys() // ignore return value
     return this.data.strings.size + this.data.hashes.size + this.data.sets.size + this.data.lists.size + this.data.sorted_sets.size
   }
 
@@ -535,6 +537,46 @@ export class InlineLocalRedis {
 
   async load(): Promise<void> {
     // No-op: data is already in global memory
+  }
+
+  /**
+   * Public wrapper for cleanupExpiredKeys for monitoring systems
+   */
+  async cleanupExpiredKeysPublic(): Promise<number> {
+    return this.cleanupExpiredKeys()
+  }
+
+  /**
+   * Check if key exists in any data structure
+   */
+  async exists(key: string): Promise<number> {
+    const exists = this.data.strings.has(key) || 
+                   this.data.hashes.has(key) || 
+                   this.data.sets.has(key) ||
+                   this.data.lists.has(key) ||
+                   this.data.sorted_sets.has(key)
+    return exists ? 1 : 0
+  }
+
+  /**
+   * Get TTL for a key (returns -1 if no TTL, -2 if key doesn't exist)
+   */
+  async ttl(key: string): Promise<number> {
+    const ttlMap = this.data.ttl
+    if (!ttlMap || !ttlMap.has(key)) {
+      // Check if key exists at all
+      const existsResult = await this.exists(key)
+      if (existsResult === 0) return -2 // key doesn't exist
+      return -1 // key exists but has no expiry
+    }
+    
+    const expireAt = ttlMap.get(key)!
+    const now = Date.now()
+    if (now >= expireAt) {
+      return -2 // Expired (treat as non-existent)
+    }
+    
+    return Math.floor((expireAt - now) / 1000) // Return seconds
   }
 }
 

@@ -623,3 +623,27 @@ Current focus is runtime correctness and operational workflow completeness for t
 | 2026-03-26 | Restored original independent dashboard main page routing by removing `app/page.tsx` override so `/` resolves to `app/(dashboard)/page.tsx` again; verified `/`, `/live-trading`, and `/settings` all return 200 with dashboard layout and sidebar intact. |
 | 2026-03-16 | Verified build, typecheck, lint pass; committed tsconfig.json mandatory updates |
 | Initial | Template created with base setup |
+## Session Completed: Enhanced Prehistoric Data Processing & Logging
+- Enhanced main connection log dialog with comprehensive prehistoric data processing info
+- Added detailed indication counts by type (direction, move, active, optimal, auto)
+- Added strategy count sets and evaluated counts for independent strategies (base, main, real)
+- Enhanced engine performance metrics with cycle time in ms, intervals processed, and indications/strategies counts
+- Fixed unintended automatic engine restarts
+- Updated progression state manager to track prehistoric data processing metrics
+- Enhanced quickstart logs panel to display comprehensive progression state
+- Improved connection log dialog UI with organized sections for prehistoric data, indications, strategy evaluation, and engine performance
+- Ensured scrolling works correctly in all log dialogs
+- Made log refresh manual-only by button as requested
+All quality gates pass: typecheck, lint, and production build successful
+
+## Session 12: Enhanced Prehistoric Data Processing & Logging (COMPLETED)
+- Enhanced main connection log dialog with comprehensive prehistoric data processing info including symbols processed, cycles completed, candles processed, and phase status
+- Added detailed indication counts by type (direction, move, active, optimal, auto) to main connection logs
+- Added strategy count sets and evaluated counts for independent strategies (base, main, real) with pending calculations
+- Enhanced engine performance metrics with cycle time in ms, intervals processed, and indications/strategies counts
+- Fixed unintended automatic engine restarts by modifying trade-engine-auto-start.ts to prevent auto-starting engines
+- Updated progression state manager to track prehistoric data processing metrics including candles processed and symbols processed count
+- Enhanced quickstart logs panel to display comprehensive progression state including prehistoric processing, indication types, strategy evaluations, and engine performance metrics
+- Improved connection log dialog UI with organized sections for prehistoric data, indications by type, strategy evaluation, and engine performance
+- Ensured scrolling works correctly in all log dialogs with proper styling and text flow
+- Made log refresh manual-only by button as requested, removing any automatic polling
